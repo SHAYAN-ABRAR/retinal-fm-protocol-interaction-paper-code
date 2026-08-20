@@ -1,0 +1,271 @@
+"""The four leave-one-domain-out experiments (brief section 20).
+
+Each run trains on three domains and evaluates on the fourth, which it has never
+seen. The held-out domain contributes **test data only** -- never training,
+validation, early stopping, model selection or temperature fitting. That is
+asserted in ``src/data/splits.py``, not left to convention.
+
+    Experiment 1: DDR + APTOS + EyePACS  ->  IDRiD     (36,080 train /    507 test)
+    Experiment 2: DDR + IDRiD + EyePACS  ->  APTOS     (33,606 train /  3,504 test)
+    Experiment 3: DDR + APTOS + IDRiD    ->  EyePACS   (11,841 train / 35,108 test)
+    Experiment 4: APTOS + IDRiD + EyePACS ->  DDR      (27,718 train / 12,424 test)
+
+Cost
+----
+Roughly 3 hours for one method across all four targets at 20 epochs, dominated
+by the ~36k-image training sets. Run it for ERM first: the Stage-C comparison
+found no method beating ERM, so establishing the ERM matrix is the priority.
+
+Usage:
+    python run_lodo.py                                # ERM, all four targets, seed 42
+    python run_lodo.py --method mixstyle --seeds 42
+    python run_lodo.py --targets idrid,eyepacs
+"""
+
+from __future__ import annotations
+
+import sys
+import time
+
+sys.path.insert(0, ".")
+
+IMAGE_SIZE = 224
+BACKBONE = "densenet121"
+BATCH_SIZE = 32
+EPOCHS = 20
+ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
+
+
+def run_one(target: str, method_name: str, seed: int) -> dict | None:
+    import pandas as pd
+    import torch
+
+    from src.data.augmentations import (
+        AugmentationConfig,
+        build_eval_transform,
+        build_train_transform,
+    )
+    from src.data.loaders import LoaderConfig, build_loaders
+    from src.data.preprocessing import PreprocessConfig
+    from src.data.splits import build_experiment_split
+    from src.data.unified_dataset import load_manifest
+    from src.evaluation.evaluate import evaluate_experiment
+    from src.models.backbones import BackboneConfig, count_parameters, resolve_input_size
+    from src.training.checkpointing import load_checkpoint
+    from src.training.methods import MethodConfig, build_method
+    from src.training.trainer import TrainConfig, Trainer
+    from src.utils.io import project_root, write_json
+    from src.utils.registry import make_experiment_id, register_experiment
+    from src.utils.seed import set_global_seed
+
+    set_global_seed(seed)
+    root = project_root()
+    outputs = root / "outputs"
+
+    sources = [d for d in ALL_DOMAINS if d != target]
+    manifest = load_manifest(outputs / "reports" / "manifest_cached_224.csv")
+    experiment = build_experiment_split(
+        manifest, protocol="lodo", sources=sources, target=target
+    )
+
+    experiment_id = make_experiment_id(
+        protocol="lodo", sources=sources, target=target,
+        backbone=BACKBONE, method=f"{method_name}-b{BATCH_SIZE}", seed=seed,
+    )
+    print(f"\n{'=' * 78}\n=== {experiment_id}\n    {experiment.sizes()}\n{'=' * 78}", flush=True)
+    for note in experiment.notes:
+        print(f"    {note}", flush=True)
+
+    augment = AugmentationConfig(image_size=IMAGE_SIZE)
+    loader_config = LoaderConfig(batch_size=BATCH_SIZE, num_workers=2, seed=seed)
+    loaders = build_loaders(
+        experiment,
+        loader_config=loader_config,
+        train_transform=build_train_transform(augment),
+        eval_transform=build_eval_transform(augment),
+        preprocess=None,
+        expected_size=IMAGE_SIZE,
+    )
+
+    backbone = BackboneConfig(name=BACKBONE, image_size=resolve_input_size(BACKBONE, IMAGE_SIZE))
+    class_counts = (
+        experiment.train["grade"].value_counts().reindex(range(5), fill_value=0).tolist()
+    )
+    method = MethodConfig(name=method_name)
+    built = build_method(method, backbone, class_counts=class_counts, device="cuda")
+    total, trainable = count_parameters(built.model)
+
+    train_config = TrainConfig(
+        epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=3e-4, weight_decay=1e-4,
+        warmup_epochs=1, scheduler="cosine", amp=True, grad_clip_norm=1.0,
+        early_stopping_patience=6, monitor="qwk", seed=seed,
+    )
+    trainer = Trainer(
+        built.model, built.loss_fn, train_config,
+        device="cuda",
+        checkpoint_dir=outputs / "checkpoints",
+        experiment_id=experiment_id,
+        extra_config={
+            **built.description,
+            "preprocess": PreprocessConfig(image_size=IMAGE_SIZE).describe(),
+            "augmentation": augment.describe(),
+            "loaders": loader_config.describe(),
+            "sources": sources,
+            "target": target,
+        },
+        feature_loss=built.feature_loss,
+        batch_hook=built.batch_hook,
+        to_probabilities=built.to_probabilities,
+    )
+    trainer.resume()
+
+    started = time.perf_counter()
+    trainer.fit(loaders["train"], loaders["val"])
+    seconds = round(time.perf_counter() - started, 1)
+
+    history = trainer.history_frame()
+    history_path = outputs / "logs" / f"{experiment_id}_history.csv"
+    history.to_csv(history_path, index=False)
+    print(f"component statistics: {built.statistics()}", flush=True)
+
+    checkpoint = trainer.checkpoints.best_path
+    eval_built = build_method(method, backbone, class_counts=class_counts, device="cuda")
+    eval_model = eval_built.model.to("cuda")
+    load_checkpoint(checkpoint, model=eval_model, map_location="cuda")
+
+    evaluation = evaluate_experiment(
+        eval_model, loaders, experiment, experiment_id=experiment_id,
+        device="cuda", predictions_dir=outputs / "predictions",
+        to_probabilities=eval_built.to_probabilities,
+        predict_fn=eval_built.predict_fn,
+    )
+    source_result = evaluation["results"]["source_val"]
+    target_result = evaluation["results"]["target_test"]
+
+    write_json(outputs / "reports" / f"{experiment_id}_evaluation.json", {
+        "experiment_id": experiment_id,
+        "method": built.description,
+        "component_statistics": built.statistics(),
+        "temperature": evaluation["temperature"],
+        "results": {k: {"metrics": v.metrics, "calibration": v.calibration,
+                        "calibration_scaled": v.calibration_scaled}
+                    for k, v in evaluation["results"].items()},
+    })
+
+    summary = trainer.checkpoints.summary()
+    register_experiment(outputs / "experiment_registry.csv", {
+        "experiment_id": experiment_id, "status": "COMPLETE", "protocol": "lodo",
+        "source_domains": sources, "target_domain": target,
+        "backbone": BACKBONE, "head": built.description.get("head"),
+        "method": method_name, "loss": built.description.get("loss"),
+        "imbalance_strategy": method.imbalance_strategy,
+        "image_size": IMAGE_SIZE, "batch_size": BATCH_SIZE,
+        "accumulation_steps": 1, "effective_batch_size": BATCH_SIZE,
+        "learning_rate": 3e-4, "weight_decay": 1e-4,
+        "epochs_planned": EPOCHS, "epochs_run": len(history), "seed": seed,
+        "deterministic": False,
+        "n_train": len(experiment.train), "n_val": len(experiment.val),
+        "n_test": len(experiment.test),
+        "best_epoch": summary["best_epoch"],
+        "best_val_qwk": summary.get("best_val_qwk"),
+        "best_val_loss": summary.get("best_val_loss"),
+        "best_checkpoint": str(checkpoint),
+        "test_qwk": target_result.metrics["qwk"],
+        "test_f1_macro": target_result.metrics["f1_macro"],
+        "test_accuracy": target_result.metrics["accuracy"],
+        "test_balanced_accuracy": target_result.metrics["balanced_accuracy"],
+        "test_mae_grade": target_result.metrics["mae_grade"],
+        "test_within_1_grade": target_result.metrics["within_1_grade"],
+        "test_severe_error_rate": target_result.metrics["severe_error_rate"],
+        "test_auroc_macro": target_result.metrics["auroc_macro"],
+        "test_ece": target_result.calibration["ece"],
+        "test_nll": target_result.calibration["nll"],
+        "test_brier": target_result.calibration["brier"],
+        "train_seconds": seconds,
+        "peak_vram_gb": float(history["peak_vram_gb"].max()) if len(history) else None,
+        "params_total_m": round(total / 1e6, 2),
+        "params_trainable_m": round(trainable / 1e6, 2),
+        "predictions_path": target_result.predictions_path,
+        "history_path": str(history_path),
+        "config_json": {**train_config.describe(), **built.description},
+        "notes": f"Full leave-one-domain-out, batch {BATCH_SIZE}; "
+                 "temperature fitted on source validation only",
+    })
+
+    row = {
+        "target": target, "method": method_name, "seed": seed,
+        "n_train": len(experiment.train), "n_test": len(experiment.test),
+        "source_qwk": source_result.metrics["qwk"],
+        "target_qwk": target_result.metrics["qwk"],
+        "source_f1": source_result.metrics["f1_macro"],
+        "target_f1": target_result.metrics["f1_macro"],
+        "source_ece": source_result.calibration["ece"],
+        "target_ece": target_result.calibration["ece"],
+        "target_ece_scaled": target_result.calibration_scaled.get("ece"),
+        "target_severe": target_result.metrics["severe_error_rate"],
+        "seconds": seconds,
+    }
+    print(f"RESULT {target}: {row}", flush=True)
+
+    del eval_model, eval_built, trainer, built
+    torch.cuda.empty_cache()
+    return row
+
+
+def main() -> None:
+    import pandas as pd
+
+    from src.utils.hardware import assert_cuda_ready
+    from src.utils.io import project_root
+
+    assert_cuda_ready()
+
+    arguments = sys.argv[1:]
+
+    def _take(flag: str, default: str) -> str:
+        if flag in arguments:
+            index = arguments.index(flag)
+            value = arguments[index + 1]
+            del arguments[index:index + 2]
+            return value
+        return default
+
+    method = _take("--method", "erm")
+    seeds = [int(s) for s in _take("--seeds", "42").split(",")]
+    targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
+
+    print(
+        f"leave-one-domain-out: method={method}, seeds={seeds}, targets={targets}\n"
+        f"  backbone={BACKBONE}, batch={BATCH_SIZE}, epochs={EPOCHS}",
+        flush=True,
+    )
+
+    rows = []
+    for seed in seeds:
+        for target in targets:
+            try:
+                result = run_one(target, method, seed)
+                if result is not None:
+                    rows.append(result)
+            except Exception as exc:  # noqa: BLE001 - one failure must not lose the rest
+                import traceback
+
+                print(f"!! target {target} seed {seed} FAILED: {type(exc).__name__}: {exc}",
+                      flush=True)
+                traceback.print_exc()
+
+    if rows:
+        path = project_root() / "outputs" / "tables" / "lodo_results.csv"
+        frame = pd.DataFrame(rows)
+        if path.exists():
+            frame = pd.concat([pd.read_csv(path), frame], ignore_index=True)
+            frame = frame.drop_duplicates(["target", "method", "seed"], keep="last")
+        frame.to_csv(path, index=False)
+        pd.set_option("display.width", 220)
+        print("\n" + "=" * 78)
+        print(frame.round(4).to_string(index=False))
+        print(f"\nsaved -> {path}")
+
+
+if __name__ == "__main__":
+    main()

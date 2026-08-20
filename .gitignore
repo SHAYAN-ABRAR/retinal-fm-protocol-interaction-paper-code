@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+outputs/checkpoints/*
+outputs/embeddings/*
+outputs/predictions/*
+outputs/logs/*
+!outputs/**/.gitkeep
+*.pt
+*.pth
+*.npz
+.pytest_cache/
