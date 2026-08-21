@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.evaluation.bootstrap import (  # noqa: E402
     bootstrap_metric,
+    holm_bonferroni,
     mcnemar_test,
     paired_bootstrap_difference,
 )
@@ -186,3 +187,92 @@ def test_risk_coverage_curve_is_deterministic_under_ties() -> None:
     assert risk_coverage_curve(y_true, y_pred, flat)[2] == risk_coverage_curve(
         y_true, y_pred, flat
     )[2]
+
+
+# ---------------------------------------------------------------------------
+# Holm-Bonferroni correction
+#
+# The null case matters most here: a family of uniformly-distributed p-values,
+# which is what pure noise produces, must yield almost no survivors. A
+# correction that lets noise through is worse than none, because it carries
+# the authority of having been "corrected".
+# ---------------------------------------------------------------------------
+def test_holm_rejects_in_step_down_order() -> None:
+    result = holm_bonferroni([0.001, 0.02, 0.03, 0.4], ["a", "b", "c", "d"])
+    survives = {r["label"]: r["survives"] for r in result}
+
+    assert survives["a"] is True          # 0.001 <= 0.05/4
+    assert survives["b"] is False         # 0.020 >  0.05/3
+    assert survives["c"] is False         # blocked by step-down
+    assert survives["d"] is False
+
+
+def test_holm_is_more_powerful_than_bonferroni() -> None:
+    """Holm's first threshold equals Bonferroni's; later ones are looser."""
+    p_values = [0.01, 0.012, 0.013, 0.014]
+    result = holm_bonferroni(p_values)
+    thresholds = sorted(r["threshold"] for r in result)
+
+    assert thresholds[0] == pytest.approx(0.05 / 4)
+    assert thresholds[-1] == pytest.approx(0.05 / 1)
+    assert sum(r["survives"] for r in result) >= sum(p <= 0.05 / 4 for p in p_values)
+
+
+def test_holm_lets_almost_nothing_through_on_pure_noise() -> None:
+    """Uniform p-values are what a family of true nulls looks like."""
+    rng = np.random.default_rng(0)
+    false_positives = 0
+    trials = 200
+    for _ in range(trials):
+        p_values = rng.uniform(size=20)
+        if any(r["survives"] for r in holm_bonferroni(p_values)):
+            false_positives += 1
+
+    # Family-wise error rate is controlled at alpha; allow sampling slack.
+    assert false_positives / trials <= 0.12, f"{false_positives}/{trials} families leaked"
+
+
+def test_holm_adjusted_p_values_are_monotone() -> None:
+    result = holm_bonferroni([0.04, 0.001, 0.5, 0.02])
+    ordered = sorted(result, key=lambda r: r["rank"])
+    adjusted = [r["p_adjusted"] for r in ordered]
+
+    assert adjusted == sorted(adjusted), "adjusted p-values must not decrease with rank"
+    assert all(a <= 1.0 for a in adjusted)
+
+
+def test_holm_single_comparison_is_uncorrected() -> None:
+    result = holm_bonferroni([0.04])
+    assert result[0]["threshold"] == pytest.approx(0.05)
+    assert result[0]["survives"] is True
+
+
+def test_holm_rejects_mismatched_labels() -> None:
+    with pytest.raises(ValueError, match="3 p-values but 2 labels"):
+        holm_bonferroni([0.1, 0.2, 0.3], ["a", "b"])
+
+
+def test_holm_handles_an_empty_family() -> None:
+    assert holm_bonferroni([]) == []
+
+
+def test_paired_bootstrap_reports_a_p_value() -> None:
+    """Holm ranks by p-value, so the comparison function must supply one."""
+    rng = np.random.default_rng(3)
+    y_true = rng.integers(0, 5, size=300)
+    good = np.where(rng.random(300) < 0.8, y_true, rng.integers(0, 5, size=300))
+    bad = rng.integers(0, 5, size=300)
+
+    result = paired_bootstrap_difference(y_true, bad, good, metric="qwk", n_bootstrap=500)
+    assert "p_value" in result
+    assert 0.0 <= result["p_value"] <= 1.0
+    assert result["p_value"] < 0.05, "a clearly better model should be detected"
+
+
+def test_identical_predictions_give_a_non_significant_p_value() -> None:
+    rng = np.random.default_rng(9)
+    y_true = rng.integers(0, 5, size=200)
+    same = np.where(rng.random(200) < 0.7, y_true, rng.integers(0, 5, size=200))
+
+    result = paired_bootstrap_difference(y_true, same, same, metric="qwk", n_bootstrap=500)
+    assert result["p_value"] > 0.05

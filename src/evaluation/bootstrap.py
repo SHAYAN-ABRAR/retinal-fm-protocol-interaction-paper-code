@@ -49,6 +49,7 @@ __all__ = [
     "bootstrap_all_metrics",
     "paired_bootstrap_difference",
     "mcnemar_test",
+    "holm_bonferroni",
 ]
 
 DEFAULT_N_BOOTSTRAP = 2000
@@ -295,7 +296,8 @@ def paired_bootstrap_difference(
     if not differences:
         return {
             "metric": metric, "difference": float(observed), "ci_lower": float("nan"),
-            "ci_upper": float("nan"), "significant": False, "n_failed_resamples": n_failed,
+            "ci_upper": float("nan"), "p_value": float("nan"),
+            "significant": False, "n_failed_resamples": n_failed,
             "n_samples": int(len(y_true)), "n_bootstrap": n_bootstrap, "seed": seed,
         }
 
@@ -304,11 +306,19 @@ def paired_bootstrap_difference(
     lower = float(np.percentile(array, 100 * alpha))
     upper = float(np.percentile(array, 100 * (1 - alpha)))
 
+    # Two-sided bootstrap achieved significance level: twice the smaller tail
+    # mass on either side of zero. Needed because Holm-Bonferroni ranks by
+    # p-value, and a confidence interval alone cannot be ranked.
+    below = float(np.mean(array <= 0))
+    above = float(np.mean(array >= 0))
+    p_value = float(min(1.0, 2 * min(below, above)))
+
     return {
         "metric": metric,
         "difference": float(observed),
         "ci_lower": lower,
         "ci_upper": upper,
+        "p_value": p_value,
         "standard_error": float(array.std(ddof=1)),
         "significant": bool(lower > 0 or upper < 0),
         "confidence_level": confidence_level,
@@ -377,3 +387,75 @@ def mcnemar_test(
         "significant_at_0.05": bool(p_value < 0.05),
         "note": "tests exact-match accuracy only; ignores ordinal distance",
     }
+
+
+def holm_bonferroni(
+    p_values: Sequence[float],
+    labels: Sequence[str] | None = None,
+    *,
+    alpha: float = 0.05,
+) -> list[dict[str, Any]]:
+    """Holm-Bonferroni step-down correction over a family of comparisons.
+
+    Why this exists
+    ---------------
+    ``paired_bootstrap_difference`` returns an *uncorrected* interval, and says
+    so in its ``note`` field. This project makes roughly thirty-five paired
+    comparisons -- six methods against ERM on five metrics, four deployment
+    costs, and the cross-domain matrix. At alpha = 0.05 and thirty-five
+    independent tests, the chance of at least one false positive is about 83%.
+    Any claim of significance in the paper has to survive a correction.
+
+    Holm rather than plain Bonferroni: it is uniformly more powerful, controls
+    the same family-wise error rate, and requires no independence assumption --
+    which matters here because the comparisons share a baseline and a test set,
+    so they are strongly dependent.
+
+    Returns one record per comparison in the input order, each carrying the
+    rank, the threshold it was tested against, and whether it survived. A
+    comparison is rejected as soon as an earlier one in the sorted order fails,
+    which is the step-down property.
+    """
+    import numpy as np
+
+    values = np.asarray(list(p_values), dtype=float)
+    n = len(values)
+    if labels is None:
+        labels = [f"comparison_{i}" for i in range(n)]
+    labels = list(labels)
+    if len(labels) != n:
+        raise ValueError(f"got {n} p-values but {len(labels)} labels")
+    if n == 0:
+        return []
+
+    order = np.argsort(np.where(np.isnan(values), np.inf, values))
+    survived = np.zeros(n, dtype=bool)
+    thresholds = np.full(n, np.nan)
+    adjusted = np.full(n, np.nan)
+
+    running = 0.0
+    still_rejecting = True
+    for rank, index in enumerate(order):
+        threshold = alpha / (n - rank)
+        thresholds[index] = threshold
+        # Adjusted p-value, monotone non-decreasing down the ranking.
+        running = max(running, min(1.0, values[index] * (n - rank)))
+        adjusted[index] = running
+        if still_rejecting and not np.isnan(values[index]) and values[index] <= threshold:
+            survived[index] = True
+        else:
+            still_rejecting = False
+
+    return [
+        {
+            "label": labels[i],
+            "p_value": float(values[i]),
+            "rank": int(np.where(order == i)[0][0]) + 1,
+            "threshold": float(thresholds[i]),
+            "p_adjusted": float(adjusted[i]),
+            "survives": bool(survived[i]),
+            "n_comparisons": n,
+            "alpha": alpha,
+        }
+        for i in range(n)
+    ]

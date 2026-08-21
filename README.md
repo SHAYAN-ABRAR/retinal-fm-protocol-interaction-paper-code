@@ -1,20 +1,25 @@
 # Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
 
-> **Status: Phase 4 — method comparison complete on one target domain, one seed.**
-> Data provenance, label verification, manifest, deduplication, splits, passing
-> leakage audit, preprocessing, image cache, three backbones, training loop,
-> metrics, calibration, bootstrap CIs, selective prediction, ordinal CORAL,
-> Deep CORAL, MixStyle, representation analysis, LaTeX tables, and the experiment
-> registry. **158 tests pass.**
+> **Status: Phases 1-7 complete. 227 tests pass.**
+> Data provenance and audit, label verification, manifest, deduplication,
+> patient-level splits, passing leakage audit, preprocessing, image cache,
+> training loop, metrics, calibration, bootstrap CIs, selective prediction,
+> ordinal CORAL, Deep CORAL, MixStyle, representation analysis, LaTeX tables,
+> and the experiment registry. **47 runs, 15.6 GPU-hours.**
 >
-> **Six methods trained** on DDR + APTOS → unseen IDRiD.
-> **No method beat the ERM baseline on target QWK** — all five alternatives are
-> significantly worse by paired bootstrap. See
-> [`docs/PHASE4_METHOD_COMPARISON.md`](docs/PHASE4_METHOD_COMPARISON.md).
+> **Headline results, all on 3 seeds:**
+> - Calibration degrades on unseen domains even where accuracy does not
+>   (held-out DDR: QWK -0.011, ECE 0.076 -> 0.130).
+> - Source-fitted temperature scaling works under mild shift and fails under
+>   severe shift (corrects DDR and APTOS; fails on IDRiD and EyePACS).
+> - Cross-domain deployment costs 0.143 QWK on DDR and 0.294 on EyePACS,
+>   measured against in-domain models on identical images.
+> - **No DG method beat ERM.** All five alternatives are worse on target QWK.
+> - **Multi-source training buys nothing.** One source matches three on all four
+>   targets; the 3-source pools were 68-89% EyePACS.
 >
-> **Not a paper result yet:** one seed, one target domain, no hyperparameter
-> search. Multi-seed runs are in progress. Every unrun item is marked `NOT RUN`.
-> See [Honesty policy](#honesty-policy).
+> **Not a paper yet:** one backbone, no hyperparameter search, no manuscript.
+> Every unrun item is marked `NOT RUN`. See [Honesty policy](#12-honesty-policy).
 
 ---
 
@@ -158,31 +163,54 @@ DDR+APTOS→IDRiD (computationally manageable) → **Stage D** full LODO with Ey
 
 ```
 dr_domain_generalization/
-├── research_pipeline.py        # interactive driver (# %% cells)
-├── configs/paths.yaml          # dataset locations + verified counts + exclusion rules
-├── data_external/              # small reference files fetched by the pipeline
-│   └── eyepacs_trainLabels.csv #   (~500 KB, downloaded by Cell 7b)
+├── research_pipeline.py        # interactive driver (35 `# %%` cells)
+├── run_lodo.py                 # the four leave-one-domain-out experiments
+├── run_in_domain.py            # in-domain ceilings + deployment-cost comparison
+├── run_single_source.py        # the 4x4 cross-domain matrix
+├── run_method_comparison.py    # Stage-C six-method ablation
+├── analyse_lodo.py             # single-seed LODO analysis
+├── analyse_lodo_seeds.py       # multi-seed LODO (two-bar criterion)
+├── analyse_seeds.py            # Stage-C multi-seed
+├── analyse_selective.py        # risk-coverage / abstention
+├── regenerate_figures.py       # rebuild figures from saved predictions
+├── configs/                    # paths, baseline, domain_generalization, experiments
+├── data_external/
+│   └── eyepacs_trainLabels.csv #   reference labels (~500 KB, Cell 7b)
 ├── docs/
-│   ├── DATA_PROVENANCE.md      # Phase-1 audit findings  <-- read this first
-│   └── PHASE2_DATA_REPORT.md   # manifest, duplicates, splits, leakage
+│   ├── DATA_PROVENANCE.md            # Phase-1 audit  <-- read this first
+│   ├── PHASE2_DATA_REPORT.md         # manifest, duplicates, splits, leakage
+│   ├── PHASE3_BASELINE_REPORT.md     # first baseline (superseded)
+│   ├── PHASE4_METHOD_COMPARISON.md   # six methods x 3 seeds
+│   ├── PHASE5_LODO_REPORT.md         # the four LODO experiments
+│   ├── PHASE6_IN_DOMAIN_REPORT.md    # in-domain ceilings, deployment cost
+│   ├── PHASE7_CROSS_DOMAIN_MATRIX.md # the 4x4 matrix
+│   └── PROJECT_HANDBOOK.md/.html     # where everything is + paper guide
 ├── src/
-│   ├── data/       inspect.py, provenance.py, eyepacs_labels.py       (Phase 1)
-│   │               schema.py, ddr.py, aptos.py, idrid.py, eyepacs.py,
-│   │               unified_dataset.py, deduplicate.py, splits.py,
-│   │               leakage.py, preprocessing.py, augmentations.py,
-│   │               image_stats.py                                     (Phase 2)
-│   ├── models/     backbones.py, ordinal_head.py, mixstyle.py, domain_generalization.py
-│   ├── losses/     classification.py, ordinal_coral_loss.py, deep_coral_alignment.py,
-│   │               calibration.py
-│   ├── training/   trainer.py, early_stopping.py, scheduler.py, checkpointing.py
-│   ├── evaluation/ metrics.py, calibration.py, selective_prediction.py,
-│   │               bootstrap.py, statistics.py
-│   ├── visualization/ style.py, dataset_figures.py  (Phase 2); training_,
-│   │               performance_, calibration_, feature_figures.py  (Phase 3+)
-│   └── utils/      seed.py, logging.py, hardware.py, io.py
+│   ├── data/       aptos.py, augmentations.py, cache.py, ddr.py
+│   │               deduplicate.py, eyepacs.py, eyepacs_labels.py, idrid.py
+│   │               image_stats.py, inspect.py, leakage.py, loaders.py
+│   │               preprocessing.py, provenance.py, schema.py, splits.py
+│   │               unified_dataset.py
+│   ├── models/     backbones.py, mixstyle.py
+│   ├── losses/     classification.py, deep_coral_alignment.py
+│   │               ordinal_coral_loss.py
+│   ├── training/   checkpointing.py, early_stopping.py, methods.py
+│   │               trainer.py
+│   ├── evaluation/ bootstrap.py, calibration.py, embeddings.py, evaluate.py
+│   │               metrics.py, selective_prediction.py
+│   ├── visualization/ calibration_figures.py, dataset_figures.py
+│   │                  domain_figures.py, error_figures.py, feature_figures.py
+│   │                  performance_figures.py, pipeline_diagram.py, style.py
+│   │                  training_figures.py
+│   ├── reporting/  summary.py, tables.py
+│   └── utils/      config.py, hardware.py, io.py, logging.py, registry.py,
+│                    seed.py
 ├── outputs/        checkpoints, logs, tables, predictions, figures, embeddings, reports
-└── tests/
+└── tests/          9 files, 227 tests
 ```
+
+`src/` is the tested library; the top-level `run_*` and `analyse_*` scripts are
+thin drivers that compose it. Nothing important lives only in the pipeline file.
 
 ## 7. Reproducibility
 
@@ -260,57 +288,87 @@ test metrics. Rows are appended; results are never overwritten.
 
 Cell 2 diagnoses all of these and prints an actionable message.
 
-## 11b. Current result (single run — read the caveats)
+## 11b. Headline results (3 seeds — read the caveats)
 
-`DDR + APTOS → IDRiD`, DenseNet121, seed 42, 95% bootstrap CIs (2,000 resamples):
+Full leave-one-domain-out, DenseNet121, batch 32, seeds 42/1/2.
+Detail: [`docs/PHASE5_LODO_REPORT.md`](docs/PHASE5_LODO_REPORT.md).
 
-| Metric | Source validation | Unseen IDRiD | Gap |
-|---|---|---|---|
-| QWK | 0.8787 [0.8618, 0.8948] | 0.6823 [0.6177, 0.7383] | **−0.196** |
-| Macro F1 | 0.6683 [0.6337, 0.7012] | 0.4323 [0.3870, 0.4752] | −0.236 |
-| AUROC (macro) | 0.9443 [0.9359, 0.9522] | 0.8672 [0.8473, 0.8862] | −0.077 |
-| **ECE** | 0.0797 [0.0686, 0.0948] | **0.3456 [0.3049, 0.3875]** | **+0.266 (4.3×)** |
+| Held out | n_test | target QWK | target ECE | after T | severe |
+|---|---|---|---|---|---|
+| DDR | 12,424 | 0.7383 ± 0.0055 | 0.1296 ± 0.0083 | **0.0472** | 0.1598 |
+| APTOS | 3,504 | 0.8590 ± 0.0054 | 0.1239 ± 0.0137 | **0.0397** | 0.0628 |
+| IDRiD | 507 | 0.7413 ± 0.0244 | 0.2294 ± 0.0151 | 0.1213 | 0.1177 |
+| EyePACS | 35,108 | 0.4147 ± 0.0081 | 0.2846 ± 0.0074 | 0.1729 | 0.2407 |
 
-Calibration degrades far more than discrimination. Temperature scaling fitted on
-**source validation only** recovers 75% of in-domain ECE but only 35% on the
-unseen domain (0.346 → 0.226) — a single in-domain scalar cannot absorb
-domain-induced miscalibration. Selective prediction works but weakly off-domain
-(error-detection AUROC 0.654 against 0.5 chance).
+**Do not quote a mean over these four.** The range is −0.483 to +0.063 against
+source validation; no target is near the mean.
 
-Note that IDRiD differs from the sources in **case mix** as well as appearance
-(32.9% no-DR vs ~50%), so label shift and covariate shift are confounded in this
-gap. Full detail and limitations: [`docs/PHASE3_BASELINE_REPORT.md`](docs/PHASE3_BASELINE_REPORT.md).
+**Validation performance does not predict generalization.** On IDRiD the three
+seeds agree to 0.0009 on source validation and differ by 0.0244 on the target —
+a ratio of 28×. Model selection may only use source validation under this
+protocol, so selection is close to blind with respect to what matters.
 
-## 11c. Method comparison (Stage C, single seed — read the caveats)
+**The cost of cross-domain deployment**, against in-domain models on identical
+test images ([`docs/PHASE6_IN_DOMAIN_REPORT.md`](docs/PHASE6_IN_DOMAIN_REPORT.md)):
 
-`DDR + APTOS → unseen IDRiD`, DenseNet121, batch 32, seed 42, n=507.
-
-| Method | Target QWK | ΔQWK vs ERM | Target ECE | Grade-3 recall |
+| Domain | in-domain | LODO mean | Δ | verdict |
 |---|---|---|---|---|
-| **ERM** | **0.753** | — | 0.265 | **0.242** |
-| Ordinal | 0.665 | −0.088 ✓ | **0.059** | 0.011 |
-| Deep CORAL | 0.665 | −0.088 ✓ | 0.335 | 0.066 |
-| MixStyle | 0.643 | −0.110 ✓ | 0.302 | 0.066 |
-| MixStyle + Ordinal | 0.662 | −0.091 ✓ | 0.063 | 0.011 |
-| Deep CORAL + Ordinal | 0.671 | −0.082 ✓ | 0.071 | 0.011 |
+| DDR | 0.8757 | 0.7327 | **−0.1430** | REAL (both bars) |
+| APTOS | 0.9091 | 0.8625 | −0.0466 | CI spans zero |
+| IDRiD | 0.5884 | 0.6803 | +0.0920 | CI spans zero |
+| EyePACS | 0.7090 | 0.4153 | **−0.2937** | REAL (both bars) |
 
-✓ = paired-bootstrap CI excludes zero. Three findings that matter:
+## 11c. Method comparison (Stage C, 3 seeds)
 
-- **Every alternative is significantly worse than ERM** on target QWK and macro F1.
-- **The ordinal calibration win is an artefact of class collapse.** ECE drops
-  4.5×, but grade-3 recall falls from 0.242 to 0.011 — grade 3 is severe NPDR,
-  the urgent-referral threshold. Aggregate calibration must never be reported
-  without per-class recall beside it.
-- **Deep CORAL did what it optimises and it wasn't enough.** Silhouette-by-domain
-  fell 3.4×, but a linear probe still recovers the domain at 0.981 — *identical
-  to ERM*. Covariance alignment does not remove linearly decodable domain
-  information.
+`DDR + APTOS → unseen IDRiD`, n=507.
+Detail: [`docs/PHASE4_METHOD_COMPARISON.md`](docs/PHASE4_METHOD_COMPARISON.md).
 
-Also: source-fitted temperature scaling **worsened** target calibration for the
-ordinal models (0.059 → 0.113), because they were under-confident in-domain and
-already calibrated out-of-domain.
+| Method | Target QWK | Target ECE | severe |
+|---|---|---|---|
+| **ERM** | **0.7235 ± 0.0320** | 0.2973 ± 0.0304 | **0.1065** |
+| Ordinal | 0.6545 ± 0.0111 | **0.0610 ± 0.0068** | 0.2156 |
+| Deep CORAL | 0.6743 ± 0.0158 | 0.3264 ± 0.0347 | 0.1374 |
+| MixStyle | 0.6617 ± 0.0197 | 0.3122 ± 0.0229 | 0.1486 |
+| MixStyle + Ordinal | 0.6596 ± 0.0170 | 0.0632 ± 0.0091 | 0.2110 |
+| Deep CORAL + Ordinal | 0.6778 ± 0.0068 | 0.0745 ± 0.0182 | 0.2032 |
 
-Full analysis and limitations: [`docs/PHASE4_METHOD_COMPARISON.md`](docs/PHASE4_METHOD_COMPARISON.md).
+- **Every alternative is worse than ERM on target QWK**, clearing both the
+  across-seed SD and the paired bootstrap.
+- **The ordinal calibration win comes with class collapse.** ECE improves ~10×
+  the seed noise, but grades 1 and 3 collapse and severe-error rate doubles.
+  Aggregate calibration must never be reported without per-class recall beside it.
+- **Deep CORAL's calibration penalty was withdrawn.** A single-seed claim
+  (+0.071) did not survive three seeds (+0.029 against pooled SD 0.033).
+
+## 11d. Cross-domain matrix (single-source, seed 42)
+
+Target QWK, rows = trained on, columns = tested on; diagonal is in-domain.
+Detail: [`docs/PHASE7_CROSS_DOMAIN_MATRIX.md`](docs/PHASE7_CROSS_DOMAIN_MATRIX.md).
+
+| train \ test | DDR | APTOS | IDRiD | EyePACS | n_train |
+|---|---|---|---|---|---|
+| **DDR** | *0.876* | 0.782 | 0.600 | 0.372 | 8,697 |
+| **APTOS** | 0.568 | *0.909* | 0.723 | 0.433 | 2,809 |
+| **IDRiD** | 0.516 | 0.597 | *0.588* | 0.236 | 335 |
+| **EyePACS** | 0.731 | 0.856 | 0.756 | *0.709* | 24,574 |
+
+**Multi-source training buys nothing.** One source matches three on all four
+targets; every difference is inside the seed SD. The three-source pools were
+68–89% EyePACS, so the LODO numbers largely measure *which* source was used,
+not *how many*.
+
+**The worst-labelled dataset is the best source.** EyePACS caps at 0.709 on its
+own data — it is the domain the audit found 50,070 corrupted labels in — yet
+trained on EyePACS and tested on DDR scores **0.731, above its own validation
+score of 0.712**.
+
+## 11e. Selective prediction
+
+Abstention is not a rescue. Error-detection AUROC across the four unseen
+domains is 0.657–0.723; handing a clinician the least-confident 30% of cases
+cuts the automated error rate by only 17–33%, and works *worst* on EyePACS
+where it is needed most. Temperature scaling is monotonic, so these numbers are
+identical before and after calibration.
 
 ## 12. Honesty policy
 

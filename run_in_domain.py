@@ -41,6 +41,8 @@ import time
 
 sys.path.insert(0, ".")
 
+# Set by main() via --image-size. The manifest, the cache and the experiment id
+# all key off this, so a resolution change cannot silently reuse the wrong cache.
 IMAGE_SIZE = 224
 BACKBONE = "densenet121"
 BATCH_SIZE = 32
@@ -54,6 +56,20 @@ LODO_IDS = {
     "idrid": "lodo_aptos-ddr-eyepacs__idrid_densenet121_erm-b32_s42",
     "eyepacs": "lodo_aptos-ddr-idrid__eyepacs_densenet121_erm-b32_s42",
 }
+
+
+def _method_tag(method_name: str) -> str:
+    """The method component of the experiment id.
+
+    Resolution is appended only when it differs from the 224 px default, so the
+    ids of every existing run are unchanged and `--compare-only` keeps finding
+    them. Without this, a 512 px run at batch 32 would produce the same id as
+    the 224 px run at batch 32 and silently overwrite its checkpoint.
+    """
+    tag = f"{method_name}-b{BATCH_SIZE}"
+    if IMAGE_SIZE != 224:
+        tag += f"-r{IMAGE_SIZE}"
+    return tag
 
 
 def run_one(domain: str, method_name: str, seed: int) -> dict | None:
@@ -81,14 +97,14 @@ def run_one(domain: str, method_name: str, seed: int) -> dict | None:
     root = project_root()
     outputs = root / "outputs"
 
-    manifest = load_manifest(outputs / "reports" / "manifest_cached_224.csv")
+    manifest = load_manifest(outputs / "reports" / f"manifest_cached_{IMAGE_SIZE}.csv")
     experiment = build_experiment_split(
         manifest, protocol="in_domain", sources=[domain], target=domain
     )
 
     experiment_id = make_experiment_id(
         protocol="in_domain", sources=[domain], target=domain,
-        backbone=BACKBONE, method=f"{method_name}-b{BATCH_SIZE}", seed=seed,
+        backbone=BACKBONE, method=_method_tag(method_name), seed=seed,
     )
     print(f"\n{'=' * 78}\n=== {experiment_id}\n    {experiment.sizes()}\n{'=' * 78}", flush=True)
     for note in experiment.notes:
@@ -242,6 +258,16 @@ def compare_to_lodo(seed: int = 42, method: str = "erm") -> None:
     predictions = outputs / "predictions"
     rows = []
 
+    if IMAGE_SIZE != 224:
+        print("\n" + "=" * 96)
+        print("COST OF CROSS-DOMAIN DEPLOYMENT -- SKIPPED")
+        print("=" * 96)
+        print(f"  The LODO references in LODO_IDS are 224 px; this in-domain model is "
+              f"{IMAGE_SIZE} px.")
+        print("  Differencing them would charge a resolution change to domain shift.")
+        print("  Run the LODO matrix at the same resolution first, then compare.")
+        return
+
     print(f"\n{'=' * 96}\nCOST OF CROSS-DOMAIN DEPLOYMENT (identical test images)\n{'=' * 96}")
     header = (f"{'domain':<9} {'n_test':>7} {'in-domain':>10} {'LODO':>8} "
               f"{'delta':>8} {'95% CI':>22} {'verdict':>12}")
@@ -251,7 +277,7 @@ def compare_to_lodo(seed: int = 42, method: str = "erm") -> None:
     for domain in ALL_DOMAINS:
         in_id = make_experiment_id(
             protocol="in_domain", sources=[domain], target=domain,
-            backbone=BACKBONE, method=f"{method}-b{BATCH_SIZE}", seed=seed,
+            backbone=BACKBONE, method=_method_tag(method), seed=seed,
         )
         in_path = predictions / f"{in_id}__target_test[{domain}]_predictions.csv"
         lodo_path = predictions / f"{LODO_IDS[domain]}__target_test[{domain}]_predictions.csv"
@@ -314,7 +340,13 @@ def compare_to_lodo(seed: int = 42, method: str = "erm") -> None:
         })
 
     if rows:
-        path = outputs / "tables" / f"in_domain_vs_lodo_{method}_s{seed}.csv"
+        # The filename encodes resolution for the same reason the experiment id
+        # does: a 512 px run must not overwrite the 224 px table. It did once,
+        # replacing four valid rows with a single row comparing a 512 px
+        # in-domain model against a 224 px LODO model -- a difference that is
+        # part resolution and part domain shift, and therefore meaningless.
+        suffix = "" if IMAGE_SIZE == 224 else f"_r{IMAGE_SIZE}"
+        path = outputs / "tables" / f"in_domain_vs_lodo_{method}_s{seed}{suffix}.csv"
         pd.DataFrame(rows).to_csv(path, index=False)
         print(f"\nsaved -> {path}")
         print("\nNote: single seed. ERM's across-seed SD on target QWK is 0.032; "
@@ -343,6 +375,12 @@ def main() -> None:
     method = _take("--method", "erm")
     seed = int(_take("--seed", "42"))
     domains = _take("--domains", ",".join(ALL_DOMAINS)).split(",")
+
+    global IMAGE_SIZE, BATCH_SIZE
+    IMAGE_SIZE = int(_take("--image-size", str(IMAGE_SIZE)))
+    # 512px is 5.2x the pixels of 224px. Batch 32 measured 2.3 GB at 224, so
+    # batch 16 keeps peak VRAM inside the 8 GB card with margin.
+    BATCH_SIZE = int(_take("--batch-size", "16" if IMAGE_SIZE > 320 else str(BATCH_SIZE)))
 
     if compare_only:
         compare_to_lodo(seed=seed, method=method)

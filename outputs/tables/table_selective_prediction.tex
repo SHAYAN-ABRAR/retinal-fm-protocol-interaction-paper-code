@@ -1,0 +1,15 @@
+\begin{table}[t]
+\centering
+\caption{Selective prediction on unseen domains, three seeds. Abstaining on the least-confident 30\% of cases reduces the automated error rate by only 17--33\%, and works \emph{worst} on EyePACS where the error rate is highest. Temperature scaling is monotonic, so these values are identical before and after calibration.}
+\label{tab:selective}
+\begin{tabular}{lrrrrr}
+\toprule
+Domain & $n$ & Error-detection AUROC & Error @100\% & Error @70\% & Reduction \\
+\midrule
+DDR & 12,424 & 0.683 $\pm$ 0.016 & 0.273 & 0.193 & 29\% \\
+APTOS 2019 & 3,504 & 0.716 $\pm$ 0.007 & 0.277 & 0.187 & 33\% \\
+IDRiD & 507 & 0.723 $\pm$ 0.012 & 0.439 & 0.343 & 22\% \\
+EyePACS & 35,108 & 0.657 $\pm$ 0.004 & 0.407 & 0.337 & 17\% \\
+\bottomrule
+\end{tabular}
+\end{table}

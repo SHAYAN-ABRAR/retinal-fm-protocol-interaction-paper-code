@@ -30,6 +30,9 @@ import time
 sys.path.insert(0, ".")
 
 IMAGE_SIZE = 224
+# Set by main() via --backbone. A module global rather than a parameter so the
+# experiment id, the registry row and the figures cannot disagree about which
+# network produced a result.
 BACKBONE = "densenet121"
 BATCH_SIZE = 32
 EPOCHS = 20
@@ -233,6 +236,20 @@ def main() -> None:
     method = _take("--method", "erm")
     seeds = [int(s) for s in _take("--seeds", "42").split(",")]
     targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
+
+    global BACKBONE, BATCH_SIZE
+    BACKBONE = _take("--backbone", BACKBONE)
+    # ConvNeXt-Tiny is 4x the parameters of DenseNet121. Batch 32 still fits in
+    # 8 GB (measured 2.8 GB peak for DenseNet), but the batch size is exposed so
+    # a larger backbone can be stepped down without editing the file.
+    BATCH_SIZE = int(_take("--batch-size", str(BATCH_SIZE)))
+
+    from src.models.backbones import SUPPORTED_BACKBONES
+
+    if BACKBONE not in SUPPORTED_BACKBONES:
+        raise SystemExit(
+            f"unknown backbone {BACKBONE!r}; choose from {sorted(SUPPORTED_BACKBONES)}"
+        )
 
     print(
         f"leave-one-domain-out: method={method}, seeds={seeds}, targets={targets}\n"

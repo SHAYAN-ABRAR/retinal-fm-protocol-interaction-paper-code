@@ -171,6 +171,7 @@ on it, because a drift makes finished runs silently report as `NOT RUN`.
 | `PHASE5_LODO_REPORT.md` | The four LODO experiments, seed 42. |
 | `PHASE6_IN_DOMAIN_REPORT.md` | In-domain ceilings and the cost of cross-domain deployment. |
 | `PROJECT_HANDBOOK.md` | This file. |
+| `PHASE7_CROSS_DOMAIN_MATRIX.md` | The full 4x4 matrix. Multi-source training buys nothing; the worst-labelled dataset is the best source. |
 | `PROJECT_HANDBOOK.html` | Same content as a navigable page (sticky contents, semantic colour on the claim tables). Published at <https://claude.ai/code/artifact/ba5193ec-9820-4938-a7cf-9023766e22b8>. Republish from this path to keep that URL. |
 
 Each phase document is written to be readable on its own and states explicitly
@@ -394,6 +395,9 @@ tables. The directory has a README naming what replaced each.
 | That EyePACS's collapse is domain shift | Confounded three ways: shift, the smallest training pool (11,841), and label noise. The in-domain model plateaus at 0.709 with 24,574 of its own images — **~40% of the apparent damage is the domain's own label ceiling.** |
 | That Deep CORAL worsens calibration | Single-seed claim (+0.071); across 3 seeds it is +0.029 against pooled SD 0.033. **Withdrawn.** |
 | Any effect < 0.032 QWK at one seed | That is ERM's measured across-seed SD. |
+| That combining clinical datasets improves generalization | **Falsified in Phase 7.** One source matches or beats three on all four targets. The 3-source pools were 68-89% EyePACS, so LODO measured *which* source, not *how many*. |
+| That single-source is *better* than multi-source | Also unsupported. Three of four deltas are inside the seed SD, and single-source variance is unmeasured at one seed. The supportable claim is "no advantage", not "worse". |
+| That abstention rescues a miscalibrated model | Error-detection AUROC is 0.657-0.723. Abstaining on 30% of cases cuts error by only 17-33%, and works worst on EyePACS where it is needed most. |
 | Novelty for the components | Ordinal CORAL, Deep CORAL, MixStyle and temperature scaling are all prior work. The contribution is the protocol, the measurement, and the falsification. |
 
 ## B6. The CORAL naming trap
@@ -410,7 +414,7 @@ co-occurrence noting the collision is coincidental.
 | Gap | Cost | Priority |
 |---|---|---|
 | **A second backbone** | ~2 h (ConvNeXt-Tiny) | **High** — "is this a DenseNet artifact?" is the first question. |
-| **Single-source external** | ~1.5 h | **High** — the only way to separate training-set size from domain shift for EyePACS. |
+| ~~Single-source external~~ | done | **COMPLETE** (Phase 7). Bounded the EyePACS size confound at ~1/3 size, ~2/3 shift — and falsified the multi-source premise. |
 | Seeds on in-domain runs | ~1 h | Medium — the deployment-cost deltas carry the in-domain model's unmeasured variance. |
 | Multiple-comparison correction | free | Medium — `paired_bootstrap_difference` returns `"note": "uncorrected for multiple comparisons"`. Apply Holm–Bonferroni before calling anything significant. |
 | DINOv2 / foundation-model baseline | ~2 h | Medium — reviewers increasingly expect one. |

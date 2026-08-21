@@ -33,9 +33,18 @@ stages:
       checkpoint round-trip exact to 0.00e+00.
 
   B_single_source:
-    description: Train on DDR alone; evaluate on DDR, APTOS, IDRiD, EyePACS to
-      size the single-source domain shift.
-    status: NOT_RUN
+    description: Train on each domain alone; evaluate on every other. Widened
+      from the planned DDR-only design to all four sources, which completes the
+      4x4 cross-domain matrix for the same compute.
+    status: COMPLETE
+    seeds_done: [42, 1, 2]
+    actual_cost: 3h04m for 12 models and 36 cross-domain evaluations
+    notes: >-
+      KEY RESULT: multi-source training shows no advantage over the best single
+      source on any target (largest gain +0.007, inside seed noise). The
+      three-source pools were 68-89% EyePACS, so the Phase-5 LODO numbers
+      largely measure WHICH source was used, not HOW MANY. Confirmed across 3 seeds.
+      See docs/PHASE7_CROSS_DOMAIN_MATRIX.md.
 
   C_methodology:
     description: DDR + APTOS -> IDRiD. Computationally cheap, so all method
@@ -62,11 +71,11 @@ stages:
 # ---------------------------------------------------------------------------
 stage_c_methods:
   - {method: erm,                status: COMPLETE, seeds_done: [42], note: "reference"}
-  - {method: ordinal,            status: COMPLETE, seeds_done: [42]}
-  - {method: deep_coral,         status: COMPLETE, seeds_done: [42]}
-  - {method: mixstyle,           status: COMPLETE, seeds_done: [42]}
-  - {method: mixstyle_ordinal,   status: COMPLETE, seeds_done: [42]}
-  - {method: deep_coral_ordinal, status: COMPLETE, seeds_done: [42]}
+  - {method: ordinal,            status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: deep_coral,         status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: mixstyle,           status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: mixstyle_ordinal,   status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: deep_coral_ordinal, status: COMPLETE, seeds_done: [42, 1, 2]}
 
 # ---------------------------------------------------------------------------
 # The four leave-one-domain-out experiments (brief section 20).
@@ -128,7 +137,13 @@ in_domain:
      caveat: "Plateaus ~0.70 with its own 24,574 images. The ceiling is label noise, not method."}
 
 single_source_external:
-  - {source: ddr, targets: [aptos, idrid, eyepacs], status: NOT_RUN}
+  - {source: ddr,     targets: [aptos, idrid, eyepacs], status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {source: aptos,   targets: [ddr, idrid, eyepacs],   status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {source: idrid,   targets: [ddr, aptos, eyepacs],   status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {source: eyepacs, targets: [ddr, aptos, idrid],     status: COMPLETE, seeds_done: [42, 1, 2]}
+  # Scope was widened from the planned single DDR source to all four, which
+  # completes every cell of the cross-domain matrix for the same compute.
+  # Seeds 1-2 in progress. See docs/PHASE7_CROSS_DOMAIN_MATRIX.md.
 
 # ---------------------------------------------------------------------------
 # Backbones (brief section 12). Only DenseNet121 has been trained.

@@ -1,0 +1,15 @@
+\begin{table}[t]
+\centering
+\caption{Cross-domain QWK for single-source models (seed 42). Diagonal entries, in italics, are in-domain. \textbf{Source identity dominates source count}: EyePACS alone matches three-source training on every target, while IDRiD alone (335 images) fails everywhere. The IDRiD row varies by up to 0.088 QWK across seeds and no single entry in it should be quoted as a point estimate.}
+\label{tab:matrix}
+\begin{tabular}{lrrrrr}
+\toprule
+Trained on & DDR & APTOS 2019 & IDRiD & EyePACS & $n_{\text{train}}$ \\
+\midrule
+DDR & \textit{0.876} & 0.782 & 0.600 & 0.372 & 8,697 \\
+APTOS 2019 & 0.568 & \textit{0.909} & 0.723 & 0.433 & 2,809 \\
+IDRiD & 0.516 & 0.597 & \textit{0.588} & 0.236 & 335 \\
+EyePACS & 0.731 & 0.856 & 0.756 & \textit{0.709} & 24,574 \\
+\bottomrule
+\end{tabular}
+\end{table}
