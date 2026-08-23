@@ -227,6 +227,8 @@ def evaluate_on_target(source: str, target: str, checkpoint, train_id: str,
 
     row = {
         "source": source, "target": target, "method": method_name, "seed": seed,
+        # See the dedup key below: resolution is part of a result's identity.
+        "image_size": IMAGE_SIZE, "backbone": BACKBONE, "batch_size": BATCH_SIZE,
         "n_train": n_train, "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
         "target_qwk": target_result.metrics["qwk"],
@@ -245,6 +247,7 @@ def main() -> None:
 
     from src.utils.hardware import assert_cuda_ready
     from src.utils.io import project_root
+    from src.utils.registry import merge_results_table
 
     assert_cuda_ready()
     arguments = sys.argv[1:]
@@ -293,8 +296,10 @@ def main() -> None:
         path = project_root() / "outputs" / "tables" / "single_source_results.csv"
         frame = pd.DataFrame(rows)
         if path.exists():
-            frame = pd.concat([pd.read_csv(path), frame], ignore_index=True)
-            frame = frame.drop_duplicates(["source", "target", "method", "seed"], keep="last")
+            frame = merge_results_table(
+                pd.read_csv(path), frame,
+                ["source", "target", "method", "seed", "image_size"],
+            )
         frame.to_csv(path, index=False)
         pd.set_option("display.width", 220)
         print("\n" + "=" * 78)

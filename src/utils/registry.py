@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -128,3 +129,34 @@ def load_registry(registry_path: Path | str) -> Any:
     if not registry_path.exists():
         return pd.DataFrame(columns=REGISTRY_COLUMNS)
     return pd.read_csv(registry_path)
+
+
+def merge_results_table(previous, new, key: Sequence[str]):
+    """Merge new summary rows into an existing results table.
+
+    ``key`` must identify a result completely. It once did not: the in-domain
+    table was keyed on ``(domain, method, seed)`` with no resolution, so the
+    512 px EyePACS run replaced the 224 px row in place. The file still held
+    four well-formed rows afterwards, so nothing looked wrong -- the loss was
+    only visible by comparing against the experiment registry, whose key is the
+    experiment id and does encode resolution.
+
+    Rows written before ``image_size`` was recorded predate any run at another
+    resolution, so they are backfilled to 224 rather than dropped.
+    """
+    import pandas as pd
+
+    key = list(key)
+    previous = previous.copy()
+    if "image_size" in key and "image_size" not in previous.columns:
+        previous["image_size"] = 224
+
+    missing = [column for column in key if column not in new.columns]
+    if missing:
+        raise ValueError(
+            f"new rows are missing key column(s) {missing}; without them a "
+            "result at different settings would overwrite an existing one"
+        )
+
+    merged = pd.concat([previous, new], ignore_index=True)
+    return merged.drop_duplicates(key, keep="last").reset_index(drop=True)

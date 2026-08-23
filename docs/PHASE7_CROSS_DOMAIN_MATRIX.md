@@ -9,6 +9,14 @@ every (train-domain, test-domain) cell.
 > **Updated with 3 seeds.** §0 below carries the final numbers and supersedes
 > the single-seed tables in §1–§2, which are kept for the record. The §5 caveat
 > has been resolved.
+>
+> **⚠ CORRECTION 2026-08-22.** §4 and §6 attributed EyePACS's low in-domain score
+> to label noise. A 512 px re-run of the identical in-domain protocol reaches
+> **0.8004** against 0.7090 at 224 px, on the identical test images (Phase 6
+> §0a). Resolution, not label quality, set that number. §4 and §6 are corrected
+> in place; the superseded wording is quoted so the error stays on the record.
+> **Everything in this document is a 224 px measurement** — the 512 px matrix is
+> running, and until it lands no number here may be differenced against one.
 
 ---
 
@@ -77,7 +85,8 @@ Target QWK. Rows = trained on, columns = tested on. Diagonal is in-domain
 | **EyePACS** | **0.731** | **0.856** | **0.756** | *0.709* | 24,574 |
 
 Two structures are immediate. **EyePACS is the hardest column** — no source
-exceeds 0.44 against an in-domain ceiling of 0.709. **IDRiD is the weakest row**,
+exceeds 0.44 against a 224 px in-domain reference of 0.709 (0.8004 at 512 px;
+see the correction above). **IDRiD is the weakest row**,
 which is its 335-image budget rather than anything about the domain.
 
 **Transfer is directional.** DDR→IDRiD 0.600 against IDRiD→DDR 0.516;
@@ -117,21 +126,39 @@ using the single largest source.
 **Source identity and scale matter; source diversity does not.** That runs
 against the default assumption in the DG literature and is worth stating plainly.
 
-## 4. Finding: the worst-labelled dataset is the best source
+## 4. Finding: the lowest-scoring dataset is the best source
 
-EyePACS is the domain whose own labels cap it at **0.709 in-domain** — the
-dataset the Phase-1 audit found 50,070 corrupted labels in, and whose grading
-protocol is the noisiest of the four. It is nonetheless the best source for
-*every* other domain.
+EyePACS scores **0.709 in-domain at 224 px** — the lowest of the four, and the
+dataset the Phase-1 audit found 50,070 corrupted labels in. It is nonetheless
+the best source for *every* other domain.
 
-Trained on EyePACS and tested on DDR it scores **0.731 — above its own
-validation score of 0.712**, because DDR's labels are cleaner than the ones it
-was trained on.
+Trained on EyePACS and tested on DDR it scores **0.731, above its own
+validation score of 0.712** (both at 224 px, so the comparison is internally
+consistent). The same model beats three-source training on every target.
 
-So label noise in a source depresses *measured* performance on that source
-without proportionally degrading what the model learns. For corpus assembly this
-inverts the usual instinct to discard the noisy dataset: it was the most valuable
-one here.
+> **Corrected.** This section was previously headed *"the worst-labelled dataset
+> is the best source"* and explained the effect as: *"because DDR's labels are
+> cleaner than the ones it was trained on … label noise in a source depresses
+> measured performance on that source without proportionally degrading what the
+> model learns."*
+>
+> **The mechanism is not established.** Phase 6 §0a shows EyePACS's own score
+> rises to 0.8004 at 512 px, so most of what looked like a label-noise floor was
+> a resolution limit. A competing explanation now fits equally well: EyePACS
+> images are simply *harder at 224 px* — more small lesions, more variable
+> capture quality — so the model scores worse on them than on DDR's cleaner
+> captures, with label quality doing none of the work.
+>
+> Distinguishing the two needs DDR at 512 px as well. If DDR gains far less than
+> EyePACS's +0.091, the gap was resolution; if both gain alike, the residual
+> difference is something else. **That run is queued and the question is open.**
+
+What survives is the practically useful part, which does not depend on the
+mechanism: **the dataset with the lowest in-domain score was the most valuable
+source for every other domain.** For corpus assembly that still inverts the
+instinct to discard the dataset that scores badly on itself — a source's own
+score is a poor guide to its worth as training data, whatever the reason it
+scores badly.
 
 ## 5. What one seed could not settle — RESOLVED in §0
 
@@ -160,12 +187,24 @@ EyePACS. Three points now exist:
 
 A 36% increase in cross-domain data bought **+0.043**. Extrapolating
 log-linearly, reaching the in-domain budget of 24,574 predicts roughly **+0.10**,
-landing near 0.52 — against the 0.709 actually achieved in-domain.
+landing near 0.52 — against the 0.709 achieved in-domain **at 224 px**.
 
-So of the 0.294 cross-domain/in-domain gap, roughly **one third is training-set
-size and two thirds is domain shift**. This is a bound from two points under a
-log-linear assumption at one seed, not a measurement. A subsample sweep at fixed
-sources would settle it for about an hour of compute.
+On that basis, of the 0.294 gap roughly **one third is training-set size and two
+thirds is domain shift**. This is a bound from two points under a log-linear
+assumption at one seed, not a measurement.
+
+> **Corrected — the reference point moved.** This decomposition uses the
+> in-domain score as its upper anchor, and Phase 6 §0a raised that anchor from
+> 0.709 to **0.8004** at 512 px. Against the 512 px anchor the gap is 0.385
+> rather than 0.294, so the *same* size extrapolation of +0.10 covers a smaller
+> share: roughly **one quarter size, three quarters shift**.
+>
+> Neither split should be quoted yet. The 0.385 version mixes a 512 px anchor
+> with 224 px cross-domain points, which charges the resolution change to domain
+> shift — exactly the error `run_in_domain.py` now refuses to commit. **The
+> honest statement today is that the size/shift split is bounded somewhere
+> between one quarter and one third size**, and the 512 px LODO matrix will
+> settle it at a single resolution.
 
 ## 7. Calibration across the matrix
 
@@ -192,6 +231,9 @@ Two statements made while results were arriving were wrong and are withdrawn:
    Falsified by the APTOS and EyePACS rows.
 2. *"Source diversity helps or hurts depending on the pair."* Closer, but wrong
    about the mechanism. The gaps were measuring *which* source, not *how many*.
+3. *"The worst-labelled dataset is the best source"* and the label-noise
+   mechanism in §4 and §6. Falsified as a mechanism by the 512 px in-domain
+   result (Phase 6 §0a); the observation survives, the explanation does not.
 
 The correct statement is §3.
 

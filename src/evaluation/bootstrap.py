@@ -113,6 +113,28 @@ def _mae(y_true: np.ndarray, y_pred: np.ndarray, probabilities: np.ndarray) -> f
     return float(np.abs(y_true - y_pred).mean())
 
 
+def _severe_error_rate(y_true: np.ndarray, y_pred: np.ndarray,
+                       probabilities: np.ndarray) -> float:
+    """Fraction of cases misgraded by two or more steps.
+
+    The clinically load-bearing error in DR screening: a two-step miss is what
+    sends a referable patient home. Defined here to match
+    ``metrics.severe_error_rate`` exactly, so a bootstrap interval and a point
+    estimate never disagree about what is being measured.
+
+    Lower is better, unlike every other entry in the registry. Callers reading
+    the sign of a difference must account for that.
+    """
+    return float((np.abs(np.asarray(y_true, dtype=np.int64)
+                         - np.asarray(y_pred, dtype=np.int64)) >= 2).mean())
+
+
+def _within_1_grade(y_true: np.ndarray, y_pred: np.ndarray,
+                    probabilities: np.ndarray) -> float:
+    return float((np.abs(np.asarray(y_true, dtype=np.int64)
+                         - np.asarray(y_pred, dtype=np.int64)) <= 1).mean())
+
+
 def _auroc_macro(y_true: np.ndarray, y_pred: np.ndarray, probabilities: np.ndarray) -> float:
     from sklearn.metrics import roc_auc_score
 
@@ -139,6 +161,8 @@ METRIC_FUNCTIONS: dict[str, Callable[[np.ndarray, np.ndarray, np.ndarray], float
     "balanced_accuracy": _balanced_accuracy,
     "accuracy": _accuracy,
     "mae_grade": _mae,
+    "severe_error_rate": _severe_error_rate,
+    "within_1_grade": _within_1_grade,
     "auroc_macro": _auroc_macro,
     "ece": _ece,
     "nll": _nll,

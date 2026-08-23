@@ -28,14 +28,20 @@ D:\Research Code\dr_domain_generalization\
 ├── run_method_comparison.py    Stage-C six-method ablation
 ├── analyse_lodo.py             single-seed LODO analysis
 ├── analyse_lodo_seeds.py       multi-seed LODO analysis (two-bar criterion)
+├── run_single_source.py        one source, every other domain (the 4x4 matrix)
 ├── analyse_seeds.py            Stage-C multi-seed analysis
+├── analyse_selective.py        risk-coverage / abstention analysis
+├── analyse_severe_error.py     severe-error deployment cost, matched images
+├── analyse_corrected.py        Holm-Bonferroni across the whole comparison family
+├── audit_consistency.py        ⭐ verify every table still agrees with the registry
+├── export_paper_tables.py      the paper's LaTeX tables, generated never retyped
 ├── regenerate_figures.py       rebuild figures from saved predictions
 ├── requirements.txt            dependencies + the sm_120/cu128 warning
-├── README.md                   project overview  ⚠ STALE — see A8
+├── README.md                   project overview
 ├── configs/                    4 YAML files
-├── docs/                       6 phase reports + this handbook (md + html)
+├── docs/                       8 phase reports + this handbook (md + html)
 ├── src/                        58 modules, the reusable library
-├── tests/                      9 test files, 227 tests
+├── tests/                      11 test files, 271 tests
 └── outputs/                    everything the experiments produced
 ```
 
@@ -170,14 +176,15 @@ on it, because a drift makes finished runs silently report as `NOT RUN`.
 | `PHASE4_METHOD_COMPARISON.md` | Six methods × 3 seeds on DDR+APTOS → IDRiD. Section 0 supersedes the single-seed numbers and carries a correction. |
 | `PHASE5_LODO_REPORT.md` | The four LODO experiments, seed 42. |
 | `PHASE6_IN_DOMAIN_REPORT.md` | In-domain ceilings and the cost of cross-domain deployment. |
+| `PHASE7_CROSS_DOMAIN_MATRIX.md` | The full 4x4 matrix. Multi-source training buys nothing; the lowest-scoring dataset is the best source. Carries a 2026-08-22 correction withdrawing the label-noise mechanism. |
+| `PHASE8_BACKBONE_COMPARISON.md` | ConvNeXt-Tiny vs DenseNet121 on all four LODO targets. **A stronger backbone buys discrimination, not calibration** — the thesis survives its most obvious attack. Also records a contamination that reached the exported LaTeX. |
 | `PROJECT_HANDBOOK.md` | This file. |
-| `PHASE7_CROSS_DOMAIN_MATRIX.md` | The full 4x4 matrix. Multi-source training buys nothing; the worst-labelled dataset is the best source. |
-| `PROJECT_HANDBOOK.html` | Same content as a navigable page (sticky contents, semantic colour on the claim tables). Published at <https://claude.ai/code/artifact/ba5193ec-9820-4938-a7cf-9023766e22b8>. Republish from this path to keep that URL. |
+| `PROJECT_HANDBOOK.html` | Same content as a navigable page (sticky contents, semantic colour on the claim tables). Open it directly from this folder in any browser — no server, no build step, no external host. |
 
 Each phase document is written to be readable on its own and states explicitly
 what it does *not* establish.
 
-## A6. `tests/` — 227 tests
+## A6. `tests/` — 259 tests
 
 | File | Guards |
 |---|---|
@@ -214,8 +221,25 @@ Peak VRAM observed across all runs: **2.8 GB of 8 GB.**
 ## A8. ⚠ Known staleness
 
 `README.md` still says *"Status: Phase 4"* and *"158 tests pass"*. Both are out
-of date (Phases 5–6 are done; 227 tests). It should be refreshed before the
+of date (Phases 5–7 are done; **255 tests**). It should be refreshed before the
 repository is shared or submitted as an artifact.
+
+**Resolution labelling.** Every result in `docs/` other than
+`PHASE6_IN_DOMAIN_REPORT.md` §0a is a **224 px** measurement. The 512 px LODO
+matrix is in progress; until it lands, no 224 px number may be differenced
+against a 512 px one. `run_in_domain.py` refuses to, and both
+`in_domain_results.csv` and `single_source_results.csv` are keyed on
+`image_size` so the two cannot overwrite each other.
+
+**A results table was silently overwritten once (2026-08-22).** The 512 px
+EyePACS run replaced the 224 px row in `in_domain_results.csv`, because the
+dedup key was `(domain, method, seed)` and carried no resolution — the file
+still held four well-formed rows afterwards, so nothing looked wrong. It was
+recovered exactly from the surviving predictions and the experiment registry
+(whose key *is* the experiment id, which encodes resolution). The merge is now
+`src/utils/registry.merge_results_table`, with six regression tests in
+`tests/test_results_merge.py`. **The registry is the authoritative record; the
+summary tables are derived.** If they ever disagree, trust the registry.
 
 ---
 
@@ -236,9 +260,10 @@ under severe shift.** Fitted only on source validation, it pulls target ECE
 leaves IDRiD 42% above (0.105 vs 0.074), and fails on EyePACS (0.180 vs 0.082).
 A practitioner cannot tell which regime they are in without target labels.
 
-**3. Cross-domain deployment costs 0.147–0.302 QWK.** Measured against
-in-domain models on identical test images: DDR −0.147 [−0.176, −0.116],
-EyePACS −0.302 [−0.330, −0.275]. APTOS and IDRiD are not resolvable at their
+**3. Cross-domain deployment costs 0.138–0.291 QWK.** Measured against
+in-domain models on identical test images, **three seeds on both sides, paired
+seed-to-seed**: DDR −0.1376 ± 0.0119 [−0.1760, −0.0954], EyePACS
+−0.2910 ± 0.0202 [−0.3305, −0.2375]. APTOS and IDRiD are not resolvable at their
 test-set sizes (354 and 102 images).
 
 **4. No domain-generalization method beat ERM.** Across 3 seeds on
@@ -246,6 +271,32 @@ DDR+APTOS → IDRiD, all five alternatives (ordinal CORAL, Deep CORAL, MixStyle,
 and two combinations) are worse on target QWK than plain ERM, clearing both the
 seed-SD and paired-bootstrap bars. The ordinal head does improve ECE by ~10×
 the seed noise — but at the cost of collapsing grades 1 and 3.
+
+**5. The same deployment cost, stated clinically: severe errors more than
+double.** On matched images, the rate of misgrading by two or more steps rises
+0.0788 → 0.1631 on DDR (**+107%**, CI [+0.0806, +0.1155]) and 0.0938 → 0.2396
+on EyePACS (**+155%**, CI [+0.1433, +0.1689]). Both clear both bars; APTOS and
+IDRiD are unresolvable at 354 and 102 test images. **This is the strongest
+framing for a clinical venue**, and it is the number recalibration cannot
+touch — temperature scaling is monotonic and cannot move an argmax.
+See `PHASE6_IN_DOMAIN_REPORT.md` §2c.
+
+**6. Input resolution was a binding constraint, and 224 px understated the
+in-domain reference.** At 512 px the in-domain EyePACS model reaches 0.8004
+against 0.7090 at 224 px on identical test images (+0.0914, CI [+0.0694,
++0.1142]), and its severe-error rate falls 0.0919 → 0.0575. This **falsified**
+the earlier claim that 0.709 was a label-noise ceiling. Every 224 px result in
+this project is now labelled as such, and the 512 px LODO matrix is running so
+the comparison can be made at one resolution. See `PHASE6_IN_DOMAIN_REPORT.md`
+§0a.
+
+**7. A stronger backbone does not fix calibration.** ConvNeXt-Tiny (27.8 M
+params) beats DenseNet121 (7.0 M) on target QWK on all four LODO targets —
+decisively on DDR (+0.0246, 4.5× seed SD) and EyePACS (+0.0585, 7.2×) — yet is
+**worse calibrated after temperature scaling on three of four**. On APTOS it
+more than doubles post-temperature ECE (0.0406 → 0.0843) for a QWK gain that is
+not established. *This is the answer to "would a better model fix this?" and a
+reviewer will ask it.* One seed only; see `PHASE8_BACKBONE_COMPARISON.md` §4.
 
 ## B2. Recommended paper structure
 
@@ -346,17 +397,27 @@ See B5.
 | 4 | **Reliability, 4 targets, before/after T** | `calibration_reliability_grid_erm_s42.png` |
 | 5 | **QWK vs ECE with temperature arrows** | `calibration_qwk_vs_ece_erm_s42.png` |
 | 6 | Method comparison across seeds | `stage_c_seed_comparison.png` |
+| 7 | **Severe-error deployment cost + CIs** | `fig_severe_error_deployment.png` |
+| 8 | **Risk–coverage, four unseen domains** | `fig_risk_coverage.png` |
 
 **Figures 4 and 5 are the paper's identity.** Figure 4 shows what a source-fitted
 temperature can and cannot repair, across all four domains at once. Figure 5 puts
 the thesis in one panel: three domains cluster at QWK 0.73–0.86 while their ECE
 spans 0.108–0.216.
 
+**Figures 7 and 8 are what a clinical reviewer reads first.** Figure 7 states the
+cost in the currency of patient harm and marks the two domains where it is not
+established, so the two-bar criterion reaches the figure rather than living only
+in the text. Figure 8 forecloses the reviewer's obvious rebuttal — *just let the
+model abstain* — by showing that abstaining on 30% of cases buys a 17–33% error
+reduction and works **worst** on EyePACS, where it is needed most.
+
 | # | Table | Source |
 |---|---|---|
 | 1 | Dataset characteristics | `table1_dataset_characteristics.tex` |
 | 2 | LODO results with CIs | `lodo_erm_s42_headline.csv`, `lodo_erm_s42_bootstrap_ci.csv` |
-| 3 | Cost of deployment | `in_domain_vs_lodo_erm_s42.csv` |
+| 3 | Cost of deployment | `in_domain_vs_lodo_erm_s42.csv`, `table_deployment_cost.tex` |
+| 4 | **Severe-error cost** | `severe_error_comparison.csv`, `table_severe_error.tex` |
 
 ### Supplementary
 
@@ -379,8 +440,9 @@ tables. The directory has a README naming what replaced each.
 > leaves 42% and 120% excess miscalibration on the remaining two."
 
 > "Relative to models trained on the target domain and evaluated on identical
-> images, cross-domain deployment costs 0.147 QWK on DDR (95% CI [0.116, 0.176])
-> and 0.302 on EyePACS (95% CI [0.275, 0.330])."
+> images and averaged over three seeds on both sides, cross-domain deployment
+> costs 0.138 QWK on DDR (95% CI [0.095, 0.176]) and 0.291 on EyePACS
+> (95% CI [0.238, 0.331])."
 
 > "Across three seeds, no domain-generalization method examined improved on
 > empirical risk minimisation for target-domain QWK."
@@ -392,7 +454,9 @@ tables. The directory has a README naming what replaced each.
 | A mean LODO gap | The four targets span −0.483 to +0.063. The mean (−0.122) describes none of them. |
 | That APTOS transfers *better* than in-domain | QWK rose (+0.063) but macro-F1 fell (−0.089). APTOS's label distribution is wider, and QWK normalises by expected disagreement. **A prior-shift artifact.** |
 | That cross-domain beats in-domain on IDRiD | On matched images: +0.078, CI [−0.091, +0.260]. Spans zero. 102 test images. |
-| That EyePACS's collapse is domain shift | Confounded three ways: shift, the smallest training pool (11,841), and label noise. The in-domain model plateaus at 0.709 with 24,574 of its own images — **~40% of the apparent damage is the domain's own label ceiling.** |
+| That EyePACS's collapse is domain shift | Confounded three ways: shift, the smallest training pool (11,841), and **input resolution**. The 224 px in-domain reference is 0.709; the same protocol at 512 px reaches **0.8004** on the same test images, so part of the apparent damage was the pipeline, not the domain. |
+| That EyePACS's 0.709 is a label-noise ceiling | **Falsified 2026-08-22.** 512 px reaches 0.8004, +0.0914 with CI [+0.0694, +0.1142]. This was claimed in Phase 6 §1 and Phase 7 §4 and is **withdrawn**; the corrections are in place. How much label noise remains is unmeasured. |
+| Any 224 px number differenced against a 512 px number | Resolution moves EyePACS's QWK by +0.091 and its severe-error rate by −37% relative. Differencing across resolutions charges that to domain shift. `run_in_domain.py` refuses; `in_domain_results.csv` is keyed on `image_size`. |
 | That Deep CORAL worsens calibration | Single-seed claim (+0.071); across 3 seeds it is +0.029 against pooled SD 0.033. **Withdrawn.** |
 | Any effect < 0.032 QWK at one seed | That is ERM's measured across-seed SD. |
 | That combining clinical datasets improves generalization | **Falsified in Phase 7.** One source matches or beats three on all four targets. The 3-source pools were 68-89% EyePACS, so LODO measured *which* source, not *how many*. |
@@ -426,13 +490,22 @@ The first two are cheap and would materially strengthen the paper.
 
 Everything needed is present:
 
-- **Code** — `src/` + drivers, 227 tests.
+- **Code** — `src/` + drivers, 271 tests.
 - **Configs** — exact settings, with unknown-key rejection so a config cannot
   silently disagree with the run it describes.
 - **Registry** — `outputs/experiment_registry.csv`, one row per run with config,
-  metrics, paths, timings, VRAM, epochs.
+  metrics, paths, timings, VRAM, epochs. **This is the authoritative record**:
+  its key is the experiment id, which encodes protocol, backbone, resolution,
+  method and seed. Summary tables are derived; where they disagree, trust it.
 - **Per-image predictions** — every claim recomputable without a GPU.
-- **Ledger** — `configs/experiments.yaml`, 26 COMPLETE / 4 NOT_RUN.
+- **Consistency audit** — `python audit_consistency.py` re-derives every summary
+  table and exported LaTeX table from the registry and the saved predictions,
+  and exits non-zero on any disagreement. 600 checks, about five seconds, no
+  GPU. **Run it before quoting a number in the manuscript.** It exists because
+  two results were silently overwritten on 2026-08-22 and neither failed
+  loudly — see A8. Both bugs are in `tests/test_audit_consistency.py` as
+  regression cases, so the audit is itself checked against the failures it was
+  written for.
 
 Before release: refresh `README.md` (A8), add a LICENSE, add a data-access
 statement (the four datasets are public but each has its own terms — DDR, APTOS

@@ -330,7 +330,7 @@ td code{background:transparent;padding:0;color:var(--accent);white-space:nowrap}
 ├── <b>configs/</b>                    <i>4 YAML files</i>
 ├── <b>docs/</b>                       <i>6 phase reports + this handbook (md + html)</i>
 ├── <b>src/</b>                        <i>58 modules, the reusable library</i>
-├── <b>tests/</b>                      <i>9 files, 227 tests</i>
+├── <b>tests/</b>                     <i>11 files, 271 tests</i>
 └── <b>outputs/</b>                    <i>everything the experiments produced</i></div>
   <div class="note flat">
     <span class="lbl">The separation that matters</span>
@@ -436,9 +436,11 @@ lodo_aptos-eyepacs-idrid__ddr_densenet121_erm-b32_s42__target_test[ddr]_predicti
       <tr><td><code>PHASE3_BASELINE_REPORT.md</code></td><td>First baseline at batch 16 — <strong>superseded</strong>, kept for the record.</td></tr>
       <tr><td><code>PHASE4_METHOD_COMPARISON.md</code></td><td>Six methods × 3 seeds. Section 0 supersedes the single-seed numbers and carries a correction.</td></tr>
       <tr><td><code>PHASE5_LODO_REPORT.md</code></td><td>The four leave-one-domain-out experiments, seed 42.</td></tr>
-      <tr><td><code>PHASE6_IN_DOMAIN_REPORT.md</code></td><td>In-domain ceilings and the cost of cross-domain deployment.</td></tr>
+      <tr><td><code>PHASE6_IN_DOMAIN_REPORT.md</code></td><td>In-domain ceilings, the cost of cross-domain deployment, the severe-error version of that cost (§2c), and the 512 px resolution correction (§0a).</td></tr>
+      <tr><td><code>PHASE7_CROSS_DOMAIN_MATRIX.md</code></td><td>The full 4×4 matrix. Multi-source training buys nothing; the lowest-scoring dataset is the best source. Carries a 2026-08-22 correction withdrawing the label-noise mechanism.</td></tr>
+      <tr><td><code>PHASE8_BACKBONE_COMPARISON.md</code></td><td>ConvNeXt-Tiny vs DenseNet121 across all four LODO targets. <strong>A stronger backbone buys discrimination, not calibration.</strong></td></tr>
       <tr><td><code>PROJECT_HANDBOOK.md</code></td><td>This document, in Markdown.</td></tr>
-      <tr><td><code>PROJECT_HANDBOOK.html</code></td><td>This page. Lives in the repo — republish from <code>docs/</code> to keep the same URL.</td></tr>
+      <tr><td><code>PROJECT_HANDBOOK.html</code></td><td>This page. Lives in <code>docs/</code> — open it directly in any browser. No server, no build step, no external host.</td></tr>
     </tbody>
   </table></div>
   <p>Each phase document is readable on its own and states explicitly what it does <em>not</em> establish.</p>
@@ -475,7 +477,9 @@ pip install -r requirements.txt</div>
   <p>Verified stack: torch 2.9.1+cu128, timm 1.0.28, albumentations 2.0.8, numpy 2.5.2, pandas 3.0.5, scikit-learn 1.9.0, matplotlib 3.11.1. Peak VRAM observed across all runs: <strong>2.8 GB of 8</strong>.</p>
   <div class="note warn">
     <span class="lbl">Known staleness</span>
-    <p><code>README.md</code> still says "Status: Phase 4" and "158 tests pass". Both are out of date — Phases 5–6 are done and 227 tests pass. Refresh it before the repository is shared or submitted as an artifact.</p>
+    <p><strong>Resolution.</strong> Every result in this handbook is a <strong>224 px</strong> measurement, except the resolution correction itself. A 512 px LODO matrix is running. Until it lands, no 224 px number may be differenced against a 512 px one — <code>run_in_domain.py</code> refuses to, and the summary tables are keyed on <code>image_size</code>.</p>
+    <p><strong>Two results tables were silently overwritten (2026-08-22), and both were recovered.</strong> <code>in_domain_results.csv</code> was keyed without resolution, so the 512 px EyePACS run replaced the 224 px row; <code>lodo_results.csv</code> was keyed without backbone, so the ConvNeXt-Tiny seed-42 run replaced the DenseNet121 seed-42 rows and <code>table_lodo.tex</code> was exported with an across-<em>architecture</em> SD presented as an across-seed SD. Both files still held the right <em>number</em> of well-formed rows afterwards, which is why neither failed loudly. The phase documents were never affected — they read predictions by experiment id. Both were rebuilt from predictions and asserted against the registry. The merge is now <code>src/utils/registry.merge_results_table</code> with ten regression tests.</p>
+    <div class="note flat"><span class="lbl">Rule</span><p><strong>The experiment registry is the authoritative record.</strong> Its key is the experiment id, which encodes protocol, backbone, resolution, method and seed. Summary tables are derived. Where they disagree, trust the registry.</p></div>
   </div>
 </section>
 
@@ -483,7 +487,7 @@ pip install -r requirements.txt</div>
 
 <section id="found">
   <h2><span class="num">B1</span>What this project actually found</h2>
-  <p>Four results, in descending order of how well they are established.</p>
+  <p>Seven results, in descending order of how well they are established.</p>
   <div class="claims">
     <div class="claim">
       <div class="rank">01</div>
@@ -499,15 +503,33 @@ pip install -r requirements.txt</div>
     </div>
     <div class="claim">
       <div class="rank">03</div>
-      <h3>Cross-domain deployment costs 0.147–0.302 QWK</h3>
+      <h3>Cross-domain deployment costs 0.138–0.291 QWK</h3>
       <p>Measured against in-domain models on identical test images. APTOS and IDRiD are not resolvable at their test-set sizes of 354 and 102 images.</p>
-      <div class="ev">DDR −0.147 [−0.176, −0.116] · EyePACS −0.302 [−0.330, −0.275]</div>
+      <div class="ev">DDR −0.1376 ± 0.0119 [−0.1760, −0.0954] · EyePACS −0.2910 ± 0.0202 [−0.3305, −0.2375] · 3 seeds both sides, paired</div>
     </div>
     <div class="claim">
       <div class="rank">04</div>
       <h3>No DG method beat ERM</h3>
       <p>Across 3 seeds on DDR+APTOS → IDRiD, all five alternatives are worse on target QWK, clearing both the seed-SD and paired-bootstrap bars. The ordinal head does improve ECE by ~10× the seed noise — at the cost of collapsing grades 1 and 3.</p>
       <div class="ev">ERM 0.7235 ± 0.0320 · best alternative 0.6778 ± 0.0068</div>
+    </div>
+    <div class="claim">
+      <div class="rank">05</div>
+      <h3>Severe errors more than double on deployment</h3>
+      <p>The same cost stated clinically: the rate of misgrading by two or more steps — the error that sends a referable patient home. <strong>This is the strongest framing for a clinical venue</strong>, and it is the number recalibration cannot touch: temperature scaling is monotonic and cannot move an argmax.</p>
+      <div class="ev">DDR 0.0788 → 0.1631 (+107%) · EyePACS 0.0938 → 0.2396 (+155%) · both bars</div>
+    </div>
+    <div class="claim">
+      <div class="rank">06</div>
+      <h3>Resolution was a binding constraint</h3>
+      <p>At 512 px the in-domain EyePACS model reaches 0.8004 against 0.7090 at 224 px on identical test images. This <strong>falsified</strong> the earlier claim that 0.709 was a label-noise ceiling. How much label noise remains is unmeasured.</p>
+      <div class="ev">+0.0914 [+0.0694, +0.1142] · severe error 0.0919 → 0.0575 · n = 5,268</div>
+    </div>
+    <div class="claim">
+      <div class="rank">07</div>
+      <h3>A stronger backbone does not fix calibration</h3>
+      <p>ConvNeXt-Tiny (27.8 M params) beats DenseNet121 (7.0 M) on target QWK on all four targets, yet is <strong>worse calibrated after temperature on three of four</strong>. On APTOS it more than doubles post-temperature ECE for a QWK gain that is not established. <em>This is the answer to "would a better model fix this?"</em></p>
+      <div class="ev">DDR +0.0246 (4.5× seed SD) · EyePACS +0.0585 (7.2×) · APTOS ECE-after-T 0.041 → 0.084 · one seed</div>
     </div>
   </div>
 </section>
@@ -563,6 +585,8 @@ pip install -r requirements.txt</div>
       <tr><td class="num-col">4</td><td><strong>Reliability, 4 targets, before/after T</strong></td><td><code>calibration_reliability_grid_erm_s42.png</code></td></tr>
       <tr><td class="num-col">5</td><td><strong>QWK vs ECE with temperature arrows</strong></td><td><code>calibration_qwk_vs_ece_erm_s42.png</code></td></tr>
       <tr><td class="num-col">6</td><td>Method comparison across seeds</td><td><code>stage_c_seed_comparison.png</code></td></tr>
+      <tr><td class="num-col">7</td><td><strong>Severe-error deployment cost, with CIs</strong></td><td><code>fig_severe_error_deployment.png</code></td></tr>
+      <tr><td class="num-col">8</td><td><strong>Risk–coverage, four unseen domains</strong></td><td><code>fig_risk_coverage.png</code></td></tr>
     </tbody>
   </table></div>
   <div class="note ok">
@@ -575,7 +599,8 @@ pip install -r requirements.txt</div>
     <tbody>
       <tr><td class="num-col">1</td><td>Dataset characteristics</td><td><code>table1_dataset_characteristics.tex</code></td></tr>
       <tr><td class="num-col">2</td><td>LODO results with CIs</td><td><code>lodo_erm_s42_headline.csv</code>, <code>lodo_erm_s42_bootstrap_ci.csv</code></td></tr>
-      <tr><td class="num-col">3</td><td>Cost of deployment</td><td><code>in_domain_vs_lodo_erm_s42.csv</code></td></tr>
+      <tr><td class="num-col">3</td><td>Cost of deployment</td><td><code>table_deployment_cost.tex</code></td></tr>
+      <tr><td class="num-col">4</td><td><strong>Severe-error cost</strong></td><td><code>table_severe_error.tex</code></td></tr>
     </tbody>
   </table></div>
   <div class="note stop">
@@ -588,7 +613,7 @@ pip install -r requirements.txt</div>
   <h2><span class="num">B4</span>Claims you can make</h2>
   <blockquote class="quote">Quadratic weighted kappa falls by only <span class="fig">0.019</span> on held-out DDR while expected calibration error doubles (<span class="fig">0.077 → 0.138</span>), showing that discrimination and calibration do not degrade together under domain shift.</blockquote>
   <blockquote class="quote">A temperature fitted exclusively on source-domain validation data reduces target ECE below the source-domain value on two of four held-out datasets, but leaves <span class="fig">42%</span> and <span class="fig">120%</span> excess miscalibration on the remaining two.</blockquote>
-  <blockquote class="quote">Relative to models trained on the target domain and evaluated on identical images, cross-domain deployment costs <span class="fig">0.147</span> QWK on DDR (95% CI [0.116, 0.176]) and <span class="fig">0.302</span> on EyePACS (95% CI [0.275, 0.330]).</blockquote>
+  <blockquote class="quote">Relative to models trained on the target domain and evaluated on identical images, and averaged over three seeds on both sides, cross-domain deployment costs <span class="fig">0.138</span> QWK on DDR (95% CI [0.095, 0.176]) and <span class="fig">0.291</span> on EyePACS (95% CI [0.238, 0.331]).</blockquote>
   <blockquote class="quote">Across three seeds, no domain-generalization method examined improved on empirical risk minimisation for target-domain QWK.</blockquote>
 </section>
 
@@ -598,7 +623,7 @@ pip install -r requirements.txt</div>
     <div class="v no"><span class="tag">Never</span><div class="body"><b>A mean LODO gap.</b><span class="why">The four targets span −0.483 to +0.063. The mean (−0.122) describes none of them.</span></div></div>
     <div class="v no"><span class="tag">Never</span><div class="body"><b>That APTOS transfers better than in-domain.</b><span class="why">QWK rose (+0.063) but macro-F1 fell (−0.089). APTOS's label distribution is wider and QWK normalises by expected disagreement — a prior-shift artifact.</span></div></div>
     <div class="v no"><span class="tag">Never</span><div class="body"><b>That cross-domain beats in-domain on IDRiD.</b><span class="why">On matched images: +0.078, CI [−0.091, +0.260]. Spans zero. 102 test images.</span></div></div>
-    <div class="v no"><span class="tag">Never</span><div class="body"><b>That EyePACS's collapse is domain shift.</b><span class="why">Confounded three ways: shift, the smallest training pool (11,841), and label noise. The in-domain model plateaus at 0.709 with 24,574 of its own images — ~40% of the apparent damage is the domain's own label ceiling.</span></div></div>
+    <div class="v no"><span class="tag">Never</span><div class="body"><b>That EyePACS's collapse is domain shift.</b><span class="why">Confounded three ways: shift, the smallest training pool (11,841), and <strong>input resolution</strong>. The 224 px in-domain reference is 0.709; the same protocol at 512 px reaches 0.8004 on the same test images, so part of the apparent damage was the pipeline, not the domain.</span></div></div>
     <div class="v no"><span class="tag">Never</span><div class="body"><b>That Deep CORAL worsens calibration.</b><span class="why">Single-seed claim (+0.071); across 3 seeds it is +0.029 against pooled SD 0.033. Withdrawn.</span></div></div>
     <div class="v no"><span class="tag">Never</span><div class="body"><b>Any effect below 0.032 QWK at one seed.</b><span class="why">That is ERM's measured across-seed SD.</span></div></div>
     <div class="v no"><span class="tag">Never</span><div class="body"><b>Novelty for the components.</b><span class="why">Ordinal CORAL, Deep CORAL, MixStyle and temperature scaling are all prior work. The contribution is the protocol, the measurement, and the falsification.</span></div></div>
@@ -628,7 +653,7 @@ pip install -r requirements.txt</div>
 
 <section id="repro">
   <h2><span class="num">B8</span>Reproducibility package</h2>
-  <p>Everything needed is present: code and 227 tests; configs with unknown-key rejection so a config cannot silently disagree with the run it describes; the registry with one row per run; per-image predictions making every claim recomputable without a GPU; and the ledger.</p>
+  <p>Everything needed is present: code and 271 tests; configs with unknown-key rejection so a config cannot silently disagree with the run it describes; the registry with one row per run; per-image predictions making every claim recomputable without a GPU; and the ledger.</p>
   <div class="note flat">
     <span class="lbl">Before release</span>
     <p>Refresh <code>README.md</code>, add a LICENSE, add a data-access statement — the four datasets are public but each has its own terms (DDR; APTOS 2019 via Kaggle; IDRiD via IEEE DataPort; EyePACS via Kaggle) — and state that raw images are not redistributed. For a checklist-style venue, <code>docs/</code> already answers most reproducibility questions; point at it directly.</p>
@@ -667,8 +692,8 @@ pip install -r requirements.txt</div>
 
 <div class="foot">
   <span>DR Generalization Handbook</span>
-  <span>Updated 2026-08-21</span>
-  <span>227 tests · 26 complete · 4 not run</span>
+  <span>Updated 2026-08-22</span>
+  <span>271 tests · 76 runs complete</span>
   <span>Source: docs/PROJECT_HANDBOOK.md</span>
 </div>
 

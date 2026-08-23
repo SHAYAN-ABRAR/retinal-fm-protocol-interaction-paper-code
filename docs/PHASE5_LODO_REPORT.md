@@ -207,10 +207,17 @@ Three explanations are entangled and this run cannot separate them:
    `docs/DATA_PROVENANCE.md`). The 35,108 retained were verified against the
    official `trainLabels.csv` at 100% agreement, so the *test* labels are
    sound, but the underlying grading protocol is still the noisiest of the four.
+4. **Input resolution** — added 2026-08-22, and the largest of the four. At
+   224 px the in-domain EyePACS model reaches 0.709; at 512 px, same protocol
+   and same test images, it reaches **0.8004** (Phase 6 §0a). DR grading turns
+   on lesions that are near sub-pixel after downsampling a fundus photograph to
+   224 px, and EyePACS is the domain that suffers most from it.
 
-**Do not attribute the EyePACS collapse to domain shift alone.** The
-single-source-external experiment (`NOT_RUN`) would separate cause 2 by varying
-the training pool size at fixed target.
+**Do not attribute the EyePACS collapse to domain shift alone.** Cause 2 was
+separated in Phase 7 §6 (bounded at roughly a quarter to a third of the gap).
+Cause 4 is being separated now by re-running this matrix at 512 px. Cause 3
+remains **unmeasured** — and note that cause 4 absorbed most of what was
+previously attributed to it.
 
 ---
 

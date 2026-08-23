@@ -22,6 +22,12 @@ sys.path.insert(0, ".")
 ALL_TARGETS = ["ddr", "aptos", "idrid", "eyepacs"]
 LABELS = {"ddr": "DDR", "aptos": "APTOS 2019", "idrid": "IDRiD", "eyepacs": "EyePACS"}
 
+# The backbone the paper's results are reported on. ConvNeXt-Tiny exists as a
+# robustness check and must never be pooled with it: mixing architectures turns
+# an across-seed SD into an across-architecture SD.
+MAIN_BACKBONE = "densenet121"
+MAIN_IMAGE_SIZE = 224
+
 
 def _pm(mean, sd, decimals: int = 4) -> str:
     import numpy as np
@@ -53,6 +59,13 @@ def main() -> None:
     if lodo.exists():
         frame = pd.read_csv(lodo)
         frame = frame[frame["method"] == "erm"]
+        # The table also holds the ConvNeXt-Tiny backbone comparison. Without
+        # this filter its seed-42 rows join the DenseNet121 seeds and the
+        # "across-seed SD" becomes an across-architecture SD -- which is how
+        # DDR came to be exported as 0.7465 +/- 0.0105 instead of
+        # 0.7383 +/- 0.0055.
+        if "backbone" in frame.columns:
+            frame = frame[frame["backbone"] == MAIN_BACKBONE]
         n_seeds = frame["seed"].nunique()
         rows = []
         for target in ALL_TARGETS:
@@ -132,6 +145,11 @@ def main() -> None:
         s = pd.read_csv(single)
         s = s[s["seed"] == 42]
         d = pd.read_csv(indomain)
+        # The matrix is a 224px table; in_domain_results.csv also holds the
+        # 512px EyePACS run. Selecting by position would put a 512px number on
+        # one diagonal cell and 224px numbers everywhere else.
+        if "image_size" in d.columns:
+            d = d[d["image_size"] == MAIN_IMAGE_SIZE]
         rows = []
         for source in ALL_TARGETS:
             cells = [LABELS[source]]
@@ -190,6 +208,44 @@ def main() -> None:
             r"3, doubling the severe-error rate.}",
             r"\label{tab:methods}",
             r"\begin{tabular}{lrrr}", r"\toprule", header, r"\midrule", body,
+            r"\bottomrule", r"\end{tabular}", r"\end{table}",
+        ]))
+
+    # ------------------------------------------------- severe-error cost
+    severe = tables / "severe_error_comparison.csv"
+    if severe.exists():
+        frame = pd.read_csv(severe)
+        rows = []
+        for target in ALL_TARGETS:
+            subset = frame[frame["target"] == target]
+            if subset.empty:
+                continue
+            r = subset.iloc[0]
+            established = r["verdict"] == "REAL (both bars)"
+            rows.append([
+                LABELS[target], f"{int(r['n_test']):,}",
+                f"{r['in_domain_severe']:.4f}",
+                _pm(r["lodo_severe_mean"], r["lodo_severe_sd"]),
+                f"${r['delta_severe']:+.4f}$",
+                f"$[{r['ci_lower']:+.4f}, {r['ci_upper']:+.4f}]$",
+                (rf"\textbf{{{r['relative_increase']:+.0%}}}".replace("%", r"\%")
+                 if established else "--"),
+            ])
+        header = (r"Domain & $n$ & In-domain & Cross-domain & $\Delta$ & "
+                  r"95\% CI & Relative \\")
+        body = "\n".join(" & ".join(r) + r" \\" for r in rows)
+        emit("table_severe_error", "\n".join([
+            r"\begin{table}[t]", r"\centering",
+            r"\caption{Severe-error rate ($|\text{error}| \geq 2$ grades) "
+            r"in-domain versus cross-domain, on \emph{identical} test images. "
+            r"A two-step misgrade is the error that sends a referable patient "
+            r"home, and it is not recoverable by recalibration: temperature "
+            r"scaling is monotonic and cannot move an argmax. Where the "
+            r"deployment cost is established under both bars it \textbf{more "
+            r"than doubles}. The relative column is left blank where the "
+            r"interval spans zero; those differences are not established.}",
+            r"\label{tab:severe}",
+            r"\begin{tabular}{lrrrrrr}", r"\toprule", header, r"\midrule", body,
             r"\bottomrule", r"\end{tabular}", r"\end{table}",
         ]))
 

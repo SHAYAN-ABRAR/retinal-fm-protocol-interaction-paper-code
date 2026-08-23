@@ -229,6 +229,10 @@ def run_one(domain: str, method_name: str, seed: int) -> dict | None:
 
     row = {
         "domain": domain, "method": method_name, "seed": seed,
+        # Recorded so the summary table can key on resolution. Without it a
+        # 512px run silently replaced the 224px row for the same domain, and
+        # the loss was invisible -- the CSV still had four well-formed rows.
+        "image_size": IMAGE_SIZE, "backbone": BACKBONE, "batch_size": BATCH_SIZE,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "val_qwk": source_result.metrics["qwk"],
         "test_qwk": target_result.metrics["qwk"],
@@ -358,6 +362,7 @@ def main() -> None:
 
     from src.utils.hardware import assert_cuda_ready
     from src.utils.io import project_root
+    from src.utils.registry import merge_results_table
 
     arguments = sys.argv[1:]
     compare_only = "--compare-only" in arguments
@@ -406,8 +411,10 @@ def main() -> None:
         path = project_root() / "outputs" / "tables" / "in_domain_results.csv"
         frame = pd.DataFrame(rows)
         if path.exists():
-            frame = pd.concat([pd.read_csv(path), frame], ignore_index=True)
-            frame = frame.drop_duplicates(["domain", "method", "seed"], keep="last")
+            frame = merge_results_table(
+                pd.read_csv(path), frame, ["domain", "method", "seed", "image_size"]
+            )
+            frame = frame.sort_values(["image_size", "domain"]).reset_index(drop=True)
         frame.to_csv(path, index=False)
         pd.set_option("display.width", 220)
         print("\n" + "=" * 78)

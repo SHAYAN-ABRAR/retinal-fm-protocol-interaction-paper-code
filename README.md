@@ -1,6 +1,9 @@
 # Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
 
-> **Status: Phases 1-7 complete. 227 tests pass.**
+> **Status: Phases 1-8 complete. 271 tests pass.**
+>
+> All results below are **224 px**. A 512 px LODO matrix is in progress;
+> see `docs/PHASE6_IN_DOMAIN_REPORT.md` §0a for why that matters.
 > Data provenance and audit, label verification, manifest, deduplication,
 > patient-level splits, passing leakage audit, preprocessing, image cache,
 > training loop, metrics, calibration, bootstrap CIs, selective prediction,
@@ -206,7 +209,7 @@ dr_domain_generalization/
 │   └── utils/      config.py, hardware.py, io.py, logging.py, registry.py,
 │                    seed.py
 ├── outputs/        checkpoints, logs, tables, predictions, figures, embeddings, reports
-└── tests/          9 files, 227 tests
+└── tests/         11 files, 271 tests
 ```
 
 `src/` is the tested library; the top-level `run_*` and `analyse_*` scripts are
@@ -309,14 +312,18 @@ a ratio of 28×. Model selection may only use source validation under this
 protocol, so selection is close to blind with respect to what matters.
 
 **The cost of cross-domain deployment**, against in-domain models on identical
-test images ([`docs/PHASE6_IN_DOMAIN_REPORT.md`](docs/PHASE6_IN_DOMAIN_REPORT.md)):
+test images, **three seeds on both sides, paired seed-to-seed**
+([`docs/PHASE6_IN_DOMAIN_REPORT.md`](docs/PHASE6_IN_DOMAIN_REPORT.md)):
 
-| Domain | in-domain | LODO mean | Δ | verdict |
-|---|---|---|---|---|
-| DDR | 0.8757 | 0.7327 | **−0.1430** | REAL (both bars) |
-| APTOS | 0.9091 | 0.8625 | −0.0466 | CI spans zero |
-| IDRiD | 0.5884 | 0.6803 | +0.0920 | CI spans zero |
-| EyePACS | 0.7090 | 0.4153 | **−0.2937** | REAL (both bars) |
+| Domain | in-domain | LODO mean | Δ | Δ SD | verdict |
+|---|---|---|---|---|---|
+| DDR | 0.8702 ± 0.0086 | 0.7327 ± 0.0038 | **−0.1376** | 0.0119 | REAL (both bars) |
+| APTOS | 0.9085 ± 0.0097 | 0.8625 ± 0.0103 | −0.0460 | 0.0127 | CI spans zero |
+| IDRiD | 0.5846 ± 0.0191 | 0.6803 ± 0.0504 | +0.0957 | 0.0695 | CI spans zero |
+| EyePACS | 0.7063 ± 0.0139 | 0.4153 ± 0.0082 | **−0.2910** | 0.0202 | REAL (both bars) |
+
+Severe errors on the same matched images: DDR 0.0788 → 0.1631 (**+107%**),
+EyePACS 0.0938 → 0.2396 (**+155%**), both clearing the two-bar criterion.
 
 ## 11c. Method comparison (Stage C, 3 seeds)
 
@@ -357,10 +364,21 @@ targets; every difference is inside the seed SD. The three-source pools were
 68–89% EyePACS, so the LODO numbers largely measure *which* source was used,
 not *how many*.
 
-**The worst-labelled dataset is the best source.** EyePACS caps at 0.709 on its
-own data — it is the domain the audit found 50,070 corrupted labels in — yet
-trained on EyePACS and tested on DDR scores **0.731, above its own validation
-score of 0.712**.
+**The lowest-scoring dataset is the best source.** EyePACS reaches only 0.709 on
+its own data at 224 px, yet trained on EyePACS and tested on DDR it scores
+**0.731, above its own validation score of 0.712** (both 224 px). A source's own
+score is a poor guide to its worth as training data.
+
+> **Corrected 2026-08-22.** This was previously headed *"the worst-labelled
+> dataset is the best source"* and explained by label noise. **The 512 px re-run
+> reaches 0.8004 on the same test images** (+0.0914, CI [+0.0694, +0.1142]), so
+> resolution — not label quality — set the 0.709. The observation stands; the
+> label-noise mechanism is withdrawn. See Phase 6 §0a.
+
+**Resolution was the binding constraint on EyePACS.** At 512 px the in-domain
+model reaches 0.8004 QWK and cuts the severe-error rate from 0.0919 to 0.0575,
+a 37% relative reduction on the metric that matters clinically. Every other
+number in this README is a 224 px measurement; the 512 px matrix is running.
 
 ## 11e. Selective prediction
 

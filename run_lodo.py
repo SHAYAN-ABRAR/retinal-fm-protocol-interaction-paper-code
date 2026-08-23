@@ -39,6 +39,20 @@ EPOCHS = 20
 ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 
 
+def _method_tag(method_name: str) -> str:
+    """The method component of the experiment id.
+
+    Resolution is appended only when it differs from the 224 px default, so
+    every existing run keeps its id. Without this a 512 px run at batch 32 would
+    produce the same id as the 224 px run at batch 32 and silently overwrite its
+    checkpoint and predictions -- destroying a finished result with no error.
+    """
+    tag = f"{method_name}-b{BATCH_SIZE}"
+    if IMAGE_SIZE != 224:
+        tag += f"-r{IMAGE_SIZE}"
+    return tag
+
+
 def run_one(target: str, method_name: str, seed: int) -> dict | None:
     import pandas as pd
     import torch
@@ -66,14 +80,14 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
     outputs = root / "outputs"
 
     sources = [d for d in ALL_DOMAINS if d != target]
-    manifest = load_manifest(outputs / "reports" / "manifest_cached_224.csv")
+    manifest = load_manifest(outputs / "reports" / f"manifest_cached_{IMAGE_SIZE}.csv")
     experiment = build_experiment_split(
         manifest, protocol="lodo", sources=sources, target=target
     )
 
     experiment_id = make_experiment_id(
         protocol="lodo", sources=sources, target=target,
-        backbone=BACKBONE, method=f"{method_name}-b{BATCH_SIZE}", seed=seed,
+        backbone=BACKBONE, method=_method_tag(method_name), seed=seed,
     )
     print(f"\n{'=' * 78}\n=== {experiment_id}\n    {experiment.sizes()}\n{'=' * 78}", flush=True)
     for note in experiment.notes:
@@ -197,6 +211,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
 
     row = {
         "target": target, "method": method_name, "seed": seed,
+        "image_size": IMAGE_SIZE, "backbone": BACKBONE, "batch_size": BATCH_SIZE,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
         "target_qwk": target_result.metrics["qwk"],
@@ -220,6 +235,7 @@ def main() -> None:
 
     from src.utils.hardware import assert_cuda_ready
     from src.utils.io import project_root
+    from src.utils.registry import merge_results_table
 
     assert_cuda_ready()
 
@@ -237,12 +253,13 @@ def main() -> None:
     seeds = [int(s) for s in _take("--seeds", "42").split(",")]
     targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
 
-    global BACKBONE, BATCH_SIZE
+    global BACKBONE, BATCH_SIZE, IMAGE_SIZE
     BACKBONE = _take("--backbone", BACKBONE)
     # ConvNeXt-Tiny is 4x the parameters of DenseNet121. Batch 32 still fits in
     # 8 GB (measured 2.8 GB peak for DenseNet), but the batch size is exposed so
     # a larger backbone can be stepped down without editing the file.
     BATCH_SIZE = int(_take("--batch-size", str(BATCH_SIZE)))
+    IMAGE_SIZE = int(_take("--image-size", str(IMAGE_SIZE)))
 
     from src.models.backbones import SUPPORTED_BACKBONES
 
@@ -257,6 +274,29 @@ def main() -> None:
         flush=True,
     )
 
+    # Resolution-scoped, for the same reason the experiment id is: every
+    # analyse_* script reads this file and filters on method alone, so one
+    # shared table would silently average two resolutions together.
+    suffix = "" if IMAGE_SIZE == 224 else f"_r{IMAGE_SIZE}"
+    path = project_root() / "outputs" / "tables" / f"lodo_results{suffix}.csv"
+
+    def save(new_rows) -> "pd.DataFrame":
+        frame = pd.DataFrame(new_rows)
+        if path.exists():
+            # backbone belongs in the key. It was once absent, and the
+            # ConvNeXt-Tiny seed-42 run replaced the DenseNet121 seed-42 rows:
+            # the three-seed means then mixed two architectures and reported
+            # DDR's across-seed SD as 0.0105 instead of 0.0055, nearly doubling
+            # a bar the two-bar criterion depends on.
+            frame = merge_results_table(
+                pd.read_csv(path), frame,
+                ["target", "method", "seed", "backbone", "image_size"],
+            )
+            frame = frame.sort_values(
+                ["backbone", "seed", "target"]).reset_index(drop=True)
+        frame.to_csv(path, index=False)
+        return frame
+
     rows = []
     for seed in seeds:
         for target in targets:
@@ -264,6 +304,14 @@ def main() -> None:
                 result = run_one(target, method, seed)
                 if result is not None:
                     rows.append(result)
+                    # Written after every target rather than once at the end.
+                    # A four-target run is ~10 h at 512 px; a crash or a power
+                    # cut on the last one used to leave three finished models
+                    # with no summary row at all. The registry and predictions
+                    # always survived, so nothing was ever lost -- but the
+                    # table had to be rebuilt by hand, and until it was, this
+                    # run looked like it had never happened.
+                    save([result])
             except Exception as exc:  # noqa: BLE001 - one failure must not lose the rest
                 import traceback
 
@@ -272,15 +320,12 @@ def main() -> None:
                 traceback.print_exc()
 
     if rows:
-        path = project_root() / "outputs" / "tables" / "lodo_results.csv"
-        frame = pd.DataFrame(rows)
-        if path.exists():
-            frame = pd.concat([pd.read_csv(path), frame], ignore_index=True)
-            frame = frame.drop_duplicates(["target", "method", "seed"], keep="last")
-        frame.to_csv(path, index=False)
+        # Read back rather than re-saving: every row is already on disk, and
+        # merge_results_table would reject an empty frame for lacking the key
+        # columns it is asked to merge on.
         pd.set_option("display.width", 220)
         print("\n" + "=" * 78)
-        print(frame.round(4).to_string(index=False))
+        print(pd.read_csv(path).round(4).to_string(index=False))
         print(f"\nsaved -> {path}")
 
 

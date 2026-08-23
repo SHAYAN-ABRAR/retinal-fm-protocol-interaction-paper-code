@@ -79,6 +79,11 @@ def main() -> None:
         return
     frame = pd.read_csv(results)
     frame = frame[frame["method"] == method]
+    # lodo_results.csv holds every backbone that has been run. Filtering on
+    # method and seed alone would pool DenseNet121 with ConvNeXt-Tiny; rows
+    # written before the column existed are DenseNet121.
+    if "backbone" in frame.columns:
+        frame = frame[frame["backbone"] == BACKBONE]
     seeds = (
         [int(s) for s in seed_argument.split(",")] if seed_argument
         else sorted(frame["seed"].unique().tolist())

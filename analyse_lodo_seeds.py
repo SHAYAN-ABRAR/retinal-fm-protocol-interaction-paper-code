@@ -60,13 +60,13 @@ def _experiment_id(target: str, method: str, seed: int) -> str:
     )
 
 
-def _in_domain_predictions_path(target: str, method: str, outputs):
+def _in_domain_predictions_path(target: str, method: str, outputs, seed: int = 42):
     """Where run_in_domain.py saved that domain's own-test predictions."""
     from src.utils.registry import make_experiment_id
 
     experiment_id = make_experiment_id(
         protocol="in_domain", sources=[target], target=target,
-        backbone=BACKBONE, method=f"{method}-b{BATCH_SIZE}", seed=42,
+        backbone=BACKBONE, method=f"{method}-b{BATCH_SIZE}", seed=seed,
     )
     return outputs / "predictions" / f"{experiment_id}__target_test[{target}]_predictions.csv"
 
@@ -112,6 +112,11 @@ def main() -> None:
 
     frame = pd.read_csv(results_path)
     frame = frame[frame["method"] == method]
+    # lodo_results.csv holds every backbone that has been run. Filtering on
+    # method and seed alone would pool DenseNet121 with ConvNeXt-Tiny; rows
+    # written before the column existed are DenseNet121.
+    if "backbone" in frame.columns:
+        frame = frame[frame["backbone"] == BACKBONE]
     seeds = (
         [int(s) for s in seed_argument.split(",")] if seed_argument
         else sorted(frame["seed"].unique().tolist())
@@ -176,7 +181,7 @@ def main() -> None:
 
     reference = pd.read_csv(in_domain_path).set_index("domain")
     print(f"\n{'=' * 104}\ncost of cross-domain deployment, re-tested against seed noise\n{'=' * 104}")
-    head = (f"  {'target':10s}{'in-domain':>10s}{'LODO mean':>11s}{'seed SD':>9s}"
+    head = (f"  {'target':10s}{'in-domain':>10s}{'LODO mean':>11s}{'delta SD':>9s}"
             f"{'delta':>9s}{'paired 95% CI':>24s}{'verdict':>28s}")
     print(head)
     print("  " + "-" * (len(head) - 2))
@@ -187,59 +192,89 @@ def main() -> None:
             print(f"  {target:10s}{'NOT RUN':>10s}")
             continue
 
-        in_domain_qwk = float(reference.loc[target, "in_domain_qwk"])
-
         # Every quantity below is computed on the SAME images the in-domain
         # model was tested on. The LODO mean in the summary table above is over
         # all of the target domain (12,424 DDR images, not 1,862), so reusing it
         # here would difference two different test sets -- the precise error
         # this comparison exists to avoid.
-        in_domain_path = _in_domain_predictions_path(target, method, outputs)
+        #
+        # Seeds are paired: the LODO model at seed s is differenced against the
+        # in-domain model at seed s. Both sides now have three seeds, and
+        # pairing them measures the variation of the *difference* rather than
+        # adding two independent noise sources together. When only one
+        # in-domain seed exists this falls back to using it for every LODO
+        # seed, which is what this comparison did before seeds 1 and 2 were run.
         intervals = []
         matched_qwks = []
-        if in_domain_path.exists():
-            reference_frame = pd.read_csv(in_domain_path)
-            reference_ids = set(reference_frame["image_id"])
-            for seed in seeds:
-                predictions = load_predictions(target, method, seed)
-                if predictions is None:
-                    continue
-                shared = reference_ids & set(predictions["image_id"])
-                if not shared:
-                    continue
-                lodo_matched = (
-                    predictions[predictions["image_id"].isin(shared)]
-                    .sort_values("image_id")
+        in_domain_qwks = []
+        deltas = []
+        paired_seeds = []
+
+        available = {
+            seed: _in_domain_predictions_path(target, method, outputs, seed)
+            for seed in seeds
+        }
+        available = {s: p for s, p in available.items() if p.exists()}
+        fallback = _in_domain_predictions_path(target, method, outputs, 42)
+        paired = bool(available)
+
+        for seed in seeds:
+            predictions = load_predictions(target, method, seed)
+            if predictions is None:
+                continue
+            in_path = available.get(seed, fallback if fallback.exists() else None)
+            if in_path is None:
+                continue
+            reference_frame = pd.read_csv(in_path)
+            shared = set(reference_frame["image_id"]) & set(predictions["image_id"])
+            if not shared:
+                continue
+            lodo_matched = (
+                predictions[predictions["image_id"].isin(shared)]
+                .sort_values("image_id")
+            )
+            in_matched = (
+                reference_frame[reference_frame["image_id"].isin(shared)]
+                .sort_values("image_id")
+            )
+            if not (lodo_matched["true_grade"].to_numpy()
+                    == in_matched["true_grade"].to_numpy()).all():
+                raise AssertionError(
+                    f"{target} seed {seed}: the two runs disagree on ground truth "
+                    "for the same image ids; one prediction file is stale."
                 )
-                in_matched = (
-                    reference_frame[reference_frame["image_id"].isin(shared)]
-                    .sort_values("image_id")
-                )
-                if not (lodo_matched["true_grade"].to_numpy()
-                        == in_matched["true_grade"].to_numpy()).all():
-                    raise AssertionError(
-                        f"{target} seed {seed}: the two runs disagree on ground truth "
-                        "for the same image ids; one prediction file is stale."
-                    )
-                result = paired_bootstrap_difference(
-                    lodo_matched["true_grade"].to_numpy(),
-                    in_matched["predicted_grade"].to_numpy(),
-                    lodo_matched["predicted_grade"].to_numpy(),
-                    metric="qwk", n_bootstrap=2000, seed=seed,
-                )
-                intervals.append((result["ci_lower"], result["ci_upper"]))
-                matched_qwks.append(quadratic_weighted_kappa(
-                    lodo_matched["true_grade"].to_numpy(),
-                    lodo_matched["predicted_grade"].to_numpy(),
-                ))
+            result = paired_bootstrap_difference(
+                lodo_matched["true_grade"].to_numpy(),
+                in_matched["predicted_grade"].to_numpy(),
+                lodo_matched["predicted_grade"].to_numpy(),
+                metric="qwk", n_bootstrap=2000, seed=seed,
+            )
+            intervals.append((result["ci_lower"], result["ci_upper"]))
+            truth = lodo_matched["true_grade"].to_numpy()
+            lodo_qwk = quadratic_weighted_kappa(
+                truth, lodo_matched["predicted_grade"].to_numpy())
+            in_qwk = quadratic_weighted_kappa(
+                truth, in_matched["predicted_grade"].to_numpy())
+            matched_qwks.append(lodo_qwk)
+            in_domain_qwks.append(in_qwk)
+            deltas.append(lodo_qwk - in_qwk)
+            paired_seeds.append(seed)
 
         n_seeds = len(matched_qwks)
         lodo_mean = float(np.mean(matched_qwks)) if matched_qwks else float("nan")
         lodo_sd = float(np.std(matched_qwks, ddof=1)) if n_seeds >= 2 else float("nan")
-        delta = lodo_mean - in_domain_qwk
+        in_domain_qwk = (float(np.mean(in_domain_qwks)) if in_domain_qwks
+                         else float(reference.loc[target, "in_domain_qwk"]))
+        in_domain_sd = (float(np.std(in_domain_qwks, ddof=1))
+                        if len(set(in_domain_qwks)) > 1 else float("nan"))
+        delta = float(np.mean(deltas)) if deltas else float("nan")
+        # Bar 1 is the SD of the per-seed difference. With one in-domain seed
+        # every delta shares the same reference, so this collapses to the LODO
+        # SD -- the old behaviour, and correctly so.
+        delta_sd = float(np.std(deltas, ddof=1)) if n_seeds >= 2 else float("nan")
 
-        # Bar 1: is the gap bigger than the run-to-run variation?
-        exceeds_sd = None if n_seeds < 2 else bool(abs(delta) > lodo_sd)
+        # Bar 1: is the gap bigger than the run-to-run variation of the gap?
+        exceeds_sd = None if n_seeds < 2 else bool(abs(delta) > delta_sd)
 
         if intervals:
             lower = min(low for low, _ in intervals)
@@ -260,13 +295,16 @@ def main() -> None:
         else:
             verdict = "CI spans zero"
 
-        sd_text = "n/a" if np.isnan(lodo_sd) else f"{lodo_sd:.4f}"
+        sd_text = "n/a" if np.isnan(delta_sd) else f"{delta_sd:.4f}"
         print(f"  {target:10s}{in_domain_qwk:>10.4f}{lodo_mean:>11.4f}{sd_text:>9s}"
               f"{delta:>+9.4f}{ci_text:>24s}{verdict:>28s}")
         verdict_rows.append({
             "target": target, "in_domain_qwk": in_domain_qwk,
+            "in_domain_qwk_sd": in_domain_sd,
             "lodo_qwk_mean": lodo_mean, "lodo_qwk_sd": lodo_sd,
-            "n_seeds": n_seeds, "delta_qwk": delta,
+            "n_seeds": n_seeds, "paired_seeds": ",".join(str(s) for s in paired_seeds),
+            "in_domain_seeds": len(in_domain_qwks) if paired else 1,
+            "delta_qwk": delta, "delta_qwk_sd": delta_sd,
             "ci_lower": lower, "ci_upper": upper,
             "exceeds_seed_sd": exceeds_sd, "ci_excludes_zero": excludes_zero,
             "verdict": verdict,
@@ -277,8 +315,17 @@ def main() -> None:
         pd.DataFrame(verdict_rows).to_csv(path, index=False)
         print(f"\nsaved -> {path}")
 
-    print("\nThe in-domain reference is itself a single seed (42). A delta here "
-          "carries that model's own run-to-run variation, which is not measured.")
+    reference_seeds = max((int(r.get("in_domain_seeds", 1)) for r in verdict_rows),
+                          default=1)
+    if reference_seeds >= 2:
+        print(f"\nBoth sides carry {reference_seeds} seeds and are paired seed-to-seed, "
+              "so the SD above is the run-to-run variation of the difference itself, "
+              "not of either model alone. It is larger than the LODO-only SD reported "
+              "before the in-domain seeds existed, because the reference now "
+              "contributes its own variance instead of being treated as exact.")
+    else:
+        print("\nThe in-domain reference is itself a single seed (42). A delta here "
+              "carries that model's own run-to-run variation, which is not measured.")
     if incomplete:
         print(f"!! incomplete targets: {', '.join(incomplete)} -- "
               "their SD is computed over fewer seeds than the others.")

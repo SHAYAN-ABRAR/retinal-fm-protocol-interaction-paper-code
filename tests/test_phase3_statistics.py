@@ -276,3 +276,77 @@ def test_identical_predictions_give_a_non_significant_p_value() -> None:
 
     result = paired_bootstrap_difference(y_true, same, same, metric="qwk", n_bootstrap=500)
     assert result["p_value"] > 0.05
+
+
+# --------------------------------------------------------------------------
+# severe_error_rate / within_1_grade in the bootstrap registry
+#
+# These were added 2026-08-22. The resolution comparison needed a confidence
+# interval on the severe-error rate -- the metric the clinical framing rests on
+# -- and it was the one headline metric the registry could not bootstrap.
+# --------------------------------------------------------------------------
+
+
+def test_severe_error_rate_matches_the_canonical_implementation() -> None:
+    """A bootstrap CI and a point estimate must measure the same thing."""
+    import numpy as np
+
+    from src.evaluation.bootstrap import METRIC_FUNCTIONS
+    from src.evaluation.metrics import compute_all_metrics
+
+    rng = np.random.default_rng(0)
+    y_true = rng.integers(0, 5, 2000)
+    y_pred = rng.integers(0, 5, 2000)
+    reference = compute_all_metrics(y_true, y_pred)
+
+    for name in ("severe_error_rate", "within_1_grade"):
+        assert METRIC_FUNCTIONS[name](y_true, y_pred, None) == pytest.approx(
+            reference[name], abs=1e-12
+        ), name
+
+
+def test_severe_error_rate_counts_two_step_misses_only() -> None:
+    import numpy as np
+
+    from src.evaluation.bootstrap import METRIC_FUNCTIONS
+
+    severe = METRIC_FUNCTIONS["severe_error_rate"]
+    y_true = np.array([0, 0, 0, 0])
+    # errors of 0, 1, 2, 4 -> the last two are severe
+    assert severe(y_true, np.array([0, 1, 2, 4]), None) == pytest.approx(0.5)
+    # a perfect model has no severe errors and is entirely within one grade
+    assert severe(y_true, y_true, None) == pytest.approx(0.0)
+    assert METRIC_FUNCTIONS["within_1_grade"](y_true, y_true, None) == pytest.approx(1.0)
+
+
+def test_severe_error_and_within_1_are_complementary() -> None:
+    """|err|>=2 and |err|<=1 partition every prediction, so they sum to one."""
+    import numpy as np
+
+    from src.evaluation.bootstrap import METRIC_FUNCTIONS
+
+    rng = np.random.default_rng(7)
+    y_true = rng.integers(0, 5, 500)
+    y_pred = rng.integers(0, 5, 500)
+    total = (METRIC_FUNCTIONS["severe_error_rate"](y_true, y_pred, None)
+             + METRIC_FUNCTIONS["within_1_grade"](y_true, y_pred, None))
+    assert total == pytest.approx(1.0)
+
+
+def test_paired_bootstrap_accepts_severe_error_rate() -> None:
+    import numpy as np
+
+    from src.evaluation.bootstrap import paired_bootstrap_difference
+
+    rng = np.random.default_rng(3)
+    y_true = rng.integers(0, 5, 600)
+    good = np.clip(y_true + rng.integers(-1, 2, 600), 0, 4)   # never a severe miss
+    bad = rng.integers(0, 5, 600)                              # many severe misses
+
+    result = paired_bootstrap_difference(
+        y_true, bad, good, metric="severe_error_rate", n_bootstrap=400, seed=1
+    )
+    # b (good) minus a (bad): the better model has the lower rate, so negative.
+    assert result["difference"] < 0
+    assert result["ci_upper"] < 0
+    assert result["significant"] is True
