@@ -1,0 +1,17 @@
+{
+  "baseline": "erm",
+  "methods_compared": [
+    "deep_coral",
+    "deep_coral_ordinal",
+    "erm",
+    "mixstyle",
+    "mixstyle_ordinal",
+    "ordinal"
+  ],
+  "methods_not_run": [],
+  "n_test": 507,
+  "paired": true,
+  "n_bootstrap": 2000,
+  "seed": 42,
+  "note": "single seed; differences below run-to-run variance cannot be resolved"
+}

@@ -1,0 +1,197 @@
+# ===========================================================================
+# experiments.yaml -- the experiment plan, and what has actually been run.
+#
+# This is a PLAN plus a STATUS LEDGER. The `status` field on every entry is the
+# single place that says whether a result exists. It is maintained by hand and
+# must match outputs/experiment_registry.csv; where the two disagree, the
+# registry is authoritative because it is written by the code.
+#
+#   status: COMPLETE  -- ran to completion, results in the registry
+#   status: NOT_RUN   -- never executed. No number exists. Do not infer one.
+#   status: PARTIAL   -- some seeds or some targets done, others not
+#
+# Nothing here fabricates a result.
+# ===========================================================================
+
+defaults:
+  config: baseline.yaml
+  backbone: densenet121
+  image_size: 224
+  batch_size: 32
+  epochs: 20
+  seeds: [42, 1, 2]
+
+# ---------------------------------------------------------------------------
+# Staged development plan (from the research brief).
+# ---------------------------------------------------------------------------
+stages:
+  A_sanity:
+    description: DDR + APTOS subset, 224px, DenseNet121, 2-3 epochs. Verify the
+      loop learns, the GPU is used, metrics compute, checkpoints round-trip.
+    status: COMPLETE
+    notes: Cell 15. Loss 1.44 -> 0.038 over 40 steps on 6 fixed batches;
+      checkpoint round-trip exact to 0.00e+00.
+
+  B_single_source:
+    description: Train on each domain alone; evaluate on every other. Widened
+      from the planned DDR-only design to all four sources, which completes the
+      4x4 cross-domain matrix for the same compute.
+    status: COMPLETE
+    seeds_done: [42, 1, 2]
+    actual_cost: 3h04m for 12 models and 36 cross-domain evaluations
+    notes: >-
+      KEY RESULT: multi-source training shows no advantage over the best single
+      source on any target (largest gain +0.007, inside seed noise). The
+      three-source pools were 68-89% EyePACS, so the Phase-5 LODO numbers
+      largely measure WHICH source was used, not HOW MANY. Confirmed across 3 seeds.
+      See docs/PHASE7_CROSS_DOMAIN_MATRIX.md.
+
+  C_methodology:
+    description: DDR + APTOS -> IDRiD. Computationally cheap, so all method
+      development happens here before the expensive full matrix.
+    status: COMPLETE
+    notes: Six methods at seed 42; seeds 1 and 2 in progress. See
+      docs/PHASE4_METHOD_COMPARISON.md.
+
+  D_full_lodo:
+    description: All four leave-one-domain-out experiments, including EyePACS.
+    status: COMPLETE
+    estimated_cost: ~3 h per method for one seed across all four targets
+    actual_cost: 2h24m wall clock for ERM, seed 42 (2288 + 2317 + 2946 + 829 s)
+    seeds_done: [42, 1, 2]
+    notes: >-
+      THREE SEEDS. Across-seed SD is 0.005 on DDR and APTOS, 0.008 on EyePACS,
+      and 0.024 on IDRiD -- variance tracks test-set size. On IDRiD the
+      source-validation SD is 0.0009 against a target SD of 0.0244 (28x), so
+      validation performance does not predict generalization.
+      See docs/PHASE5_LODO_REPORT.md section 0.
+
+# ---------------------------------------------------------------------------
+# Stage C: the method comparison. All share sources [ddr, aptos], target idrid.
+# ---------------------------------------------------------------------------
+stage_c_methods:
+  - {method: erm,                status: COMPLETE, seeds_done: [42], note: "reference"}
+  - {method: ordinal,            status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: deep_coral,         status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: mixstyle,           status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: mixstyle_ordinal,   status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {method: deep_coral_ordinal, status: COMPLETE, seeds_done: [42, 1, 2]}
+
+# ---------------------------------------------------------------------------
+# The four leave-one-domain-out experiments (brief section 20).
+# The held-out target contributes TEST DATA ONLY -- never training, validation,
+# early stopping, model selection or temperature fitting.
+# ---------------------------------------------------------------------------
+leave_one_domain_out:
+  - id: lodo_ddr
+    sources: [aptos, idrid, eyepacs]
+    target: ddr
+    n_train: 27718
+    n_test: 12424
+    status: COMPLETE
+    seeds_done: [42, 1, 2]
+    target_qwk: 0.7383   # mean, SD 0.0055
+
+  - id: lodo_aptos
+    sources: [ddr, idrid, eyepacs]
+    target: aptos
+    n_train: 33606
+    n_test: 3504
+    status: COMPLETE
+    seeds_done: [42, 1, 2]
+    target_qwk: 0.8590   # mean, SD 0.0054
+    caveat: "QWK rose vs source val while macro-F1 fell; prior shift, not better transfer."
+
+  - id: lodo_idrid
+    sources: [ddr, aptos, eyepacs]
+    target: idrid
+    n_train: 36080
+    n_test: 507
+    status: COMPLETE
+    seeds_done: [42, 1, 2]
+    target_qwk: 0.7413   # mean, SD 0.0244 -- the volatile target
+    note: >-
+      Distinct from the Stage-C run, which used only DDR + APTOS as sources.
+      Adding EyePACS makes this the full three-source experiment.
+
+  - id: lodo_eyepacs
+    sources: [ddr, aptos, idrid]
+    target: eyepacs
+    n_train: 11841
+    n_test: 35108
+    status: COMPLETE
+    seeds_done: [42, 1, 2]
+    target_qwk: 0.4147   # mean, SD 0.0081
+    caveat: "Worst target by far. Confounded: fewest source images (11,841) AND
+      the noisiest labels. Do not attribute to domain shift alone."
+
+# ---------------------------------------------------------------------------
+# In-domain and single-source external validation (brief section 19).
+# ---------------------------------------------------------------------------
+in_domain:
+  - {domain: ddr,     status: COMPLETE, seeds_done: [42], n_train: 8697,  test_qwk: 0.8757}
+  - {domain: aptos,   status: COMPLETE, seeds_done: [42], n_train: 2809,  test_qwk: 0.9091}
+  - {domain: idrid,   status: COMPLETE, seeds_done: [42], n_train: 335,   test_qwk: 0.5884,
+     caveat: "335 training images. Val QWK 0.857 vs test 0.588 on 70/102 images -- both too small to be stable."}
+  - {domain: eyepacs, status: COMPLETE, seeds_done: [42], n_train: 24574, test_qwk: 0.7090,
+     caveat: "Plateaus ~0.70 with its own 24,574 images. The ceiling is label noise, not method."}
+
+single_source_external:
+  - {source: ddr,     targets: [aptos, idrid, eyepacs], status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {source: aptos,   targets: [ddr, idrid, eyepacs],   status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {source: idrid,   targets: [ddr, aptos, eyepacs],   status: COMPLETE, seeds_done: [42, 1, 2]}
+  - {source: eyepacs, targets: [ddr, aptos, idrid],     status: COMPLETE, seeds_done: [42, 1, 2]}
+  # Scope was widened from the planned single DDR source to all four, which
+  # completes every cell of the cross-domain matrix for the same compute.
+  # Seeds 1-2 in progress. See docs/PHASE7_CROSS_DOMAIN_MATRIX.md.
+
+# ---------------------------------------------------------------------------
+# Backbones (brief section 12). Only DenseNet121 has been trained.
+# ---------------------------------------------------------------------------
+backbones:
+  - {name: densenet121,   params_m: 6.96,  status: COMPLETE}
+  - {name: convnext_tiny, params_m: 27.8,  status: NOT_RUN,
+     note: "measured 317 img/s vs DenseNet121's 217 -- faster despite 4x params"}
+  - {name: dinov2_vits14, params_m: 21.6,  status: NOT_RUN,
+     note: "patch-14: 384 is invalid and snaps to 378. Freeze most blocks first."}
+
+# ---------------------------------------------------------------------------
+# The ablation grid (brief section 27). Calibration is a post-hoc axis: it needs
+# no separate training run, so every trained model yields both rows.
+# ---------------------------------------------------------------------------
+ablation:
+  axes: [ordinal, domain_generalization, calibration]
+  grid:
+    - {ordinal: false, dg: none,       calibration: false, maps_to: erm,                status: COMPLETE}
+    - {ordinal: true,  dg: none,       calibration: false, maps_to: ordinal,            status: COMPLETE}
+    - {ordinal: false, dg: deep_coral, calibration: false, maps_to: deep_coral,         status: COMPLETE}
+    - {ordinal: false, dg: mixstyle,   calibration: false, maps_to: mixstyle,           status: COMPLETE}
+    - {ordinal: true,  dg: mixstyle,   calibration: false, maps_to: mixstyle_ordinal,   status: COMPLETE}
+    - {ordinal: true,  dg: deep_coral, calibration: false, maps_to: deep_coral_ordinal, status: COMPLETE}
+    - {ordinal: false, dg: none,       calibration: true,  maps_to: "erm + temperature",  status: COMPLETE}
+    - {ordinal: true,  dg: deep_coral, calibration: true,  maps_to: "deep_coral_ordinal + temperature", status: COMPLETE}
+  note: >-
+    The full system was NOT assumed to win, and did not. ERM leads on target QWK;
+    every alternative is significantly worse by paired bootstrap. Read
+    docs/PHASE4_METHOD_COMPARISON.md section 3 before treating the ordinal ECE
+    improvement as a win -- it comes with collapse of grades 1 and 3.
+
+# ---------------------------------------------------------------------------
+# Protocol constraints. These are enforced in code, not by convention; listed
+# here so the file is self-describing.
+# ---------------------------------------------------------------------------
+protocol_rules:
+  target_domain_is_sacred: true
+  target_used_for: [final_evaluation]
+  target_never_used_for:
+    - training
+    - validation
+    - early_stopping
+    - model_selection
+    - temperature_scaling
+    - hyperparameter_search
+    - augmentation_selection
+  enforced_by:
+    - src/data/splits.py::_assert_target_isolation
+    - src/evaluation/evaluate.py::evaluate_experiment  # fits T on source val only
+    - src/training/checkpointing.py::CheckpointManager  # sees val metrics only

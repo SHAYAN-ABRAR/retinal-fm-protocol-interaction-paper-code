@@ -1,0 +1,207 @@
+[
+  {
+    "audit": "eyepacs_folder_composition",
+    "severity": "CRITICAL",
+    "summary": "The folder mapped to the EyePACS domain is a pooled derivative: it contains 85,178 unique EyePACS images (43,565 patients) AND 3,662 unique APTOS images, plus 3,662 augmented duplicate files.",
+    "evidence": {
+      "image_root": "D:\\DB\\Dataset 1\\dr_unified_v2\\dr_unified_v2",
+      "files_by_family": {
+        "aptos": 7323,
+        "eyepacs": 85178
+      },
+      "unique_eyepacs_images": 85178,
+      "unique_eyepacs_patients": 43565,
+      "unique_aptos_images": 3662,
+      "files_that_are_augmented_copies": 3662
+    },
+    "consequence": "Using this folder as-is would (a) put APTOS images in two different 'domains' at once and (b) train on augmented copies of test images.",
+    "remedy": "Keep only filenames matching ^\\d+_(left|right)$, drop every file carrying a GF- / -GF marker, and ignore the provided split folders. Rules are encoded in configs/paths.yaml under domains.eyepacs."
+  },
+  {
+    "audit": "cross_domain_duplication",
+    "severity": "CRITICAL",
+    "summary": "3,662 of 3,662 APTOS images (100.0%) are also physically present inside the folder mapped to the EyePACS domain.",
+    "evidence": {
+      "aptos_domain_images": 3662,
+      "aptos_style_images_in_eyepacs_folder": 3662,
+      "overlapping_ids": 3662,
+      "overlap_fraction_of_aptos": 1.0,
+      "examples": [
+        "000c1434d8d7",
+        "001639a390f0",
+        "0024cdab0c1e",
+        "002c21358ce6",
+        "005b95c28852"
+      ]
+    },
+    "consequence": "A leave-one-domain-out experiment holding out APTOS would still train on every held-out APTOS image via the EyePACS domain. The external evaluation would be meaningless.",
+    "remedy": "APTOS images must come only from the APTOS domain. The EyePACS loader must exclude every 12-hex filename; this is asserted, not assumed."
+  },
+  {
+    "audit": "provided_split_integrity",
+    "severity": "CRITICAL",
+    "summary": "The provided train/val/test folders leak: 1,231 base photographs and 14,244 patients appear in more than one split.",
+    "evidence": {
+      "image_root": "D:\\DB\\Dataset 1\\dr_unified_v2\\dr_unified_v2",
+      "unique_base_images_per_split": {
+        "test": 9227,
+        "train": 71636,
+        "val": 9208
+      },
+      "base_image_overlap": {
+        "test&train": 575,
+        "test&val": 93,
+        "train&val": 563
+      },
+      "unique_patients_per_split": {
+        "test": 8110,
+        "train": 41571,
+        "val": 8128
+      },
+      "patient_overlap": {
+        "test&train": 6679,
+        "test&val": 817,
+        "train&val": 6748
+      }
+    },
+    "consequence": "Any in-domain result computed on these splits is optimistically biased and cannot be reported.",
+    "remedy": "Discard the provided split folders entirely. Pool the images, then re-split at patient level (both eyes of a patient stay together). configs/paths.yaml sets ignore_provided_splits: true for this reason."
+  },
+  {
+    "audit": "csv_disk_consistency",
+    "severity": "WARNING",
+    "summary": "[ddr] 12,522 labelled rows; 0 have no image file; 2 image files have no label row.",
+    "evidence": {
+      "n_label_rows": 12522,
+      "n_files_on_disk": 12524,
+      "n_labelled_without_file": 0,
+      "labelled_without_file_examples": [],
+      "n_files_without_label": 2,
+      "files_without_label": [
+        "007-7447-601.jpg",
+        "007-7449-601.jpg"
+      ]
+    },
+    "consequence": "Unlabelled files must be excluded explicitly; labelled-but-absent rows would crash the loader mid-epoch.",
+    "remedy": "The unified index keeps only ids that have both a label row and a file."
+  },
+  {
+    "audit": "filename_collisions",
+    "severity": "WARNING",
+    "summary": "[idrid] 103 filenames are reused across split folders.",
+    "evidence": {
+      "per_split_counts": {
+        "train": 413,
+        "test": 103
+      },
+      "collision_counts": {
+        "test&train": 103
+      },
+      "examples": {
+        "test&train": [
+          "IDRiD_001.jpg",
+          "IDRiD_002.jpg",
+          "IDRiD_003.jpg"
+        ]
+      }
+    },
+    "consequence": "An index keyed on bare filename would merge two distinct images and assign one of them the wrong grade.",
+    "remedy": "Namespace every image id as '<domain>/<split>/<filename>'. The unified index must use that composite key, not the raw filename."
+  },
+  {
+    "audit": "label_alphabets",
+    "severity": "INFO",
+    "summary": "All CSV-labelled domains use the grade alphabet {0,1,2,3,4}.",
+    "evidence": {
+      "per_domain_label_counts": {
+        "ddr": {
+          "0": 6266,
+          "1": 630,
+          "2": 4477,
+          "3": 236,
+          "4": 913
+        },
+        "aptos": {
+          "0": 1805,
+          "1": 370,
+          "2": 999,
+          "3": 193,
+          "4": 295
+        },
+        "idrid": {
+          "0": 168,
+          "1": 25,
+          "2": 168,
+          "3": 93,
+          "4": 62
+        },
+        "eyepacs": {
+          "<labels come from folder names>": -1
+        }
+      }
+    },
+    "consequence": "An unmapped extra class (for example DDR grade 5 = ungradable) would be trained on as if it were a severity level.",
+    "remedy": "Any non-0-4 value must get an explicit entry in the label map written by Phase 2 to outputs/reports/label_mapping.json."
+  },
+  {
+    "audit": "csv_disk_consistency",
+    "severity": "INFO",
+    "summary": "[aptos] 3,662 labelled rows; 0 have no image file; 0 image files have no label row.",
+    "evidence": {
+      "n_label_rows": 3662,
+      "n_files_on_disk": 3662,
+      "n_labelled_without_file": 0,
+      "labelled_without_file_examples": [],
+      "n_files_without_label": 0,
+      "files_without_label": []
+    },
+    "consequence": "Unlabelled files must be excluded explicitly; labelled-but-absent rows would crash the loader mid-epoch.",
+    "remedy": "The unified index keeps only ids that have both a label row and a file."
+  },
+  {
+    "audit": "csv_disk_consistency",
+    "severity": "INFO",
+    "summary": "[idrid] 516 labelled rows; 0 have no image file; 0 image files have no label row.",
+    "evidence": {
+      "n_label_rows": 516,
+      "n_files_on_disk": 413,
+      "n_labelled_without_file": 0,
+      "labelled_without_file_examples": [],
+      "n_files_without_label": 0,
+      "files_without_label": []
+    },
+    "consequence": "Unlabelled files must be excluded explicitly; labelled-but-absent rows would crash the loader mid-epoch.",
+    "remedy": "The unified index keeps only ids that have both a label row and a file."
+  },
+  {
+    "audit": "filename_collisions",
+    "severity": "INFO",
+    "summary": "[aptos] 0 filenames are reused across split folders.",
+    "evidence": {
+      "per_split_counts": {
+        "train": 2930,
+        "val": 366,
+        "test": 366
+      },
+      "collision_counts": {
+        "test&train": 0,
+        "test&val": 0,
+        "train&val": 0
+      },
+      "examples": {}
+    },
+    "consequence": "An index keyed on bare filename would merge two distinct images and assign one of them the wrong grade.",
+    "remedy": "Namespace every image id as '<domain>/<split>/<filename>'. The unified index must use that composite key, not the raw filename."
+  },
+  {
+    "audit": "label_consistency_across_folders",
+    "severity": "INFO",
+    "summary": "0 base images carry conflicting grade labels in different class folders.",
+    "evidence": {
+      "n_conflicts": 0,
+      "examples": {}
+    },
+    "consequence": "Conflicting labels would make the folder-derived grade unusable.",
+    "remedy": "None needed if zero; otherwise the folder labels cannot be trusted at all."
+  }
+]

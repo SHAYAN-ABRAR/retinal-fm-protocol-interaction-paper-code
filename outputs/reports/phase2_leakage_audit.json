@@ -1,0 +1,49 @@
+{
+  "n_images": 51543,
+  "split_sizes": {
+    "train": 36415,
+    "test": 7586,
+    "val": 7542
+  },
+  "id_overlap": {
+    "test&train": 0,
+    "test&val": 0,
+    "train&val": 0
+  },
+  "id_overlap_examples": {},
+  "patient_overlap": {
+    "test&train": 0,
+    "test&val": 0,
+    "train&val": 0
+  },
+  "patient_overlap_examples": {},
+  "domains_with_patient_ids": [
+    "eyepacs"
+  ],
+  "domains_without_patient_ids": [
+    "aptos",
+    "ddr",
+    "idrid"
+  ],
+  "hashing_performed": true,
+  "n_files_hashed": 9978,
+  "n_duplicate_content_groups": 0,
+  "duplicate_content_across_splits": {},
+  "duplicate_content_across_domains": 0,
+  "duplicate_content_examples": [],
+  "duplicate_rows": 0,
+  "duplicate_paths": 0,
+  "repeated_bare_filenames": 100,
+  "repeated_bare_filename_examples": [
+    "IDRiD_001.jpg",
+    "IDRiD_002.jpg",
+    "IDRiD_003.jpg",
+    "IDRiD_004.jpg",
+    "IDRiD_005.jpg"
+  ],
+  "limitations": [
+    "Patient ids are unavailable for aptos, ddr, idrid; those domains are split at image level, so same-patient images could in principle span splits. This cannot be detected or prevented from the released data and is reported as a limitation of the datasets, not of the protocol.",
+    "Content hashing detects byte-identical files only. The same photograph re-encoded or resized would not be flagged; near-duplicate detection would require perceptual hashing."
+  ],
+  "problems": []
+}

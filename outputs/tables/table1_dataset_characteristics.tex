@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Dataset characteristics after exact-duplicate removal. Patient-level splitting is possible only for EyePACS.}
+\label{tab:datasets}
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+Domain & Images & Patients & Grade 0 & Grade 1 & Grade 2 & Grade 3 & Grade 4 & No-DR \% & Patient-level split \\
+\midrule
+DDR & 12424 & n/a & 6168 & 630 & 4477 & 236 & 913 & 49.6 & No \\
+APTOS 2019 & 3504 & n/a & 1796 & 338 & 922 & 177 & 271 & 51.3 & No \\
+IDRiD & 507 & n/a & 167 & 23 & 165 & 91 & 61 & 32.9 & No \\
+EyePACS & 35108 & 17,561 & 25802 & 2438 & 5288 & 872 & 708 & 73.5 & Yes \\
+\bottomrule
+\end{tabular}
+\vspace{2pt}\\\footnotesize{n/a: the dataset publishes no patient identifiers.}
+\end{table}
