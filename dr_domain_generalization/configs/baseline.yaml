@@ -1,0 +1,120 @@
+# ===========================================================================
+# baseline.yaml -- the ERM reference configuration.
+#
+# Every other config extends this one and states only what it changes, so an
+# ablation compares methods rather than accidental differences in wiring.
+#
+# Loaded via src/utils/config.py, which constructs the project's real
+# dataclasses. An unknown or misspelled key RAISES rather than being silently
+# ignored -- a config that quietly fell back to a default would describe a run
+# that never happened.
+#
+# Values here are the ones actually used for the Stage-C runs recorded in
+# outputs/experiment_registry.csv, not aspirational defaults.
+# ===========================================================================
+
+name: baseline_erm
+description: >-
+  Empirical risk minimisation with 5-class cross-entropy. The reference every
+  other method must beat. No ordinal objective, no domain-generalization term,
+  no imbalance handling.
+
+seed: 42
+seeds: [42, 1, 2]        # used by multi-seed runs; a single run takes `seed`
+
+# Working resolution. 224 for development; 384 for final runs if VRAM allows
+# (measured peak at 224/batch 32 was 2.13 GB of 8 GB, so there is headroom).
+# DINOv2 is patch-14, so 384 is snapped to 378 automatically -- and the change
+# is logged, never silent.
+image_size: 224
+
+# --- protocol -------------------------------------------------------------
+# The held-out target NEVER contributes training, validation, early-stopping,
+# model-selection or temperature-fitting data. Enforced by an assertion in
+# src/data/splits.py, not by convention.
+protocol: lodo
+sources: [ddr, aptos]
+target: idrid
+
+# --- deterministic preprocessing -----------------------------------------
+preprocess:
+  crop_to_retina: true
+  # 0.20 chosen from a threshold sweep over 20 images per domain: below 0.15 the
+  # retained area swings 7-10 percentage points (JPEG ringing in IDRiD's black
+  # surround); from 0.20 every domain is flat to within 0.3 points per step.
+  background_threshold: 0.20
+  min_retina_fraction: 0.05
+  apply_circular_mask: false      # available as an ablation; off by default
+  pad_value: 0
+
+# --- training augmentation ------------------------------------------------
+# Conservative by design: DR grading depends on microaneurysms a few pixels
+# across, and aggressive photometric augmentation can erase the evidence the
+# label depends on. Heavy colour jitter is deliberately absent -- it mimics the
+# inter-camera variation this study is trying to MEASURE.
+augmentation:
+  horizontal_flip: 0.5
+  vertical_flip: 0.5
+  rotation_degrees: 15
+  scale_limit: 0.10
+  shift_limit: 0.05
+  affine_probability: 0.5
+  brightness_limit: 0.15
+  contrast_limit: 0.15
+  photometric_probability: 0.5
+
+# --- splits ---------------------------------------------------------------
+# Patient-level where patient ids exist (EyePACS only); stratified at image
+# level otherwise. See docs/DATA_PROVENANCE.md for why the other three domains
+# cannot be split at patient level.
+split:
+  seed: 42
+  val_fraction: 0.15
+  test_fraction: 0.15
+
+# --- dataloaders ----------------------------------------------------------
+# num_workers=2, not 4: measured loader throughput at 2 workers is 1343 img/s
+# against a GPU step of 217 img/s, so more workers buy nothing and cost RAM.
+loader:
+  num_workers: 2
+  persistent_workers: true
+  prefetch_factor: 2
+  drop_last_train: true
+  balanced_sampling: false
+
+# --- method ---------------------------------------------------------------
+method:
+  name: erm
+  imbalance_strategy: none      # 'weighted_ce' | 'focal' | 'balanced_sampling'
+  label_smoothing: 0.0
+
+# --- backbone -------------------------------------------------------------
+backbone:
+  name: densenet121             # 'convnext_tiny' | 'dinov2_vits14'
+  pretrained: true
+  num_classes: 5
+  head: linear                  # set to 'ordinal_coral' by the ordinal methods
+  dropout: 0.2
+  trainable_blocks: null        # null = train the whole backbone
+
+# --- optimisation ---------------------------------------------------------
+# batch_size 32, not 16: Deep CORAL estimates a per-domain covariance within the
+# batch, and at the natural DDR/APTOS 76/24 mix a batch of 16 leaves fewer than
+# 4 APTOS samples 43% of the time. Held at 32 for EVERY method, including ERM,
+# so the comparison is not confounded by batch size.
+training:
+  epochs: 20
+  batch_size: 32
+  accumulation_steps: 1         # raise if VRAM forces a smaller micro-batch
+  learning_rate: 3.0e-4
+  head_learning_rate: null      # null = same as learning_rate
+  weight_decay: 1.0e-4
+  warmup_epochs: 1
+  scheduler: cosine             # 'plateau' | 'none'
+  min_learning_rate: 1.0e-6
+  amp: true
+  grad_clip_norm: 1.0
+  early_stopping_patience: 6
+  monitor: qwk                  # SOURCE-validation QWK; never a target metric
+  monitor_mode: max
+  num_classes: 5

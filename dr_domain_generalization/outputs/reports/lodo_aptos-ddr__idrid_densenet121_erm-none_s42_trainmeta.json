@@ -1,0 +1,29 @@
+{
+  "experiment_id": "lodo_aptos-ddr__idrid_densenet121_erm-none_s42",
+  "seconds": 1111.0,
+  "params_total": 6958981,
+  "params_trainable": 6958981,
+  "sizes": {
+    "train": 11506,
+    "val": 2206,
+    "test": 507
+  },
+  "checkpoints": {
+    "checkpoint_dir": "D:\\Research Code\\dr_domain_generalization\\outputs\\checkpoints\\lodo_aptos-ddr__idrid_densenet121_erm-none_s42",
+    "monitor": "qwk",
+    "best_val_qwk": 0.878708061067158,
+    "best_epoch": 18,
+    "best_val_loss": 0.47457924439315347,
+    "best_loss_epoch": 8
+  },
+  "early_stopping": {
+    "monitor": "qwk",
+    "mode": "max",
+    "patience": 6,
+    "min_delta": 0.0001,
+    "best": 0.878708061067158,
+    "best_epoch": 18,
+    "stopped_early": false,
+    "epochs_without_improvement": 1
+  }
+}

@@ -1,0 +1,15 @@
+\begin{table}[t]
+\centering
+\caption{Severe-error rate ($|\text{error}| \geq 2$ grades) in-domain versus cross-domain, on \emph{identical} test images. A two-step misgrade is the error that sends a referable patient home, and it is not recoverable by recalibration: temperature scaling is monotonic and cannot move an argmax. Where the deployment cost is established under both bars it \textbf{more than doubles}. The relative column is left blank where the interval spans zero; those differences are not established.}
+\label{tab:severe}
+\begin{tabular}{lrrrrrr}
+\toprule
+Domain & $n$ & In-domain & Cross-domain & $\Delta$ & 95\% CI & Relative \\
+\midrule
+DDR & 1,862 & 0.0788 & 0.1631 $\pm$ 0.0054 & $+0.0843$ & $[+0.0806, +0.1155]$ & \textbf{+107\%} \\
+APTOS 2019 & 354 & 0.0395 & 0.0669 $\pm$ 0.0091 & $+0.0273$ & $[-0.0085, +0.0424]$ & -- \\
+IDRiD & 102 & 0.2092 & 0.1536 $\pm$ 0.0344 & $-0.0556$ & $[-0.1373, +0.0588]$ & -- \\
+EyePACS & 5,268 & 0.0938 & 0.2396 $\pm$ 0.0075 & $+0.1457$ & $[+0.1433, +0.1689]$ & \textbf{+155\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
