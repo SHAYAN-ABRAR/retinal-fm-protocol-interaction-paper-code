@@ -221,6 +221,12 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "target_ece": target_result.calibration["ece"],
         "target_ece_scaled": target_result.calibration_scaled.get("ece"),
         "target_severe": target_result.metrics["severe_error_rate"],
+        # The table has always had a temperature column and this row has never
+        # filled it, so every run wrote NaN there and only rows touched by a
+        # hand-rebuild held a value. A scaled ECE beside an empty temperature
+        # reads as scaling that did not happen; it always had, and the number
+        # was in the evaluation report the whole time.
+        "temperature": (evaluation["temperature"] or {}).get("temperature"),
         "seconds": seconds,
     }
     print(f"RESULT {target}: {row}", flush=True)
