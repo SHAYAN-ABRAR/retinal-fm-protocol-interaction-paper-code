@@ -136,6 +136,27 @@ def specifications():
 
         return len(json.loads(registry_row["source_domains"]))
 
+    def is_subsample(registry_row) -> bool:
+        """Sweep runs register as protocol=lodo, method=erm, three sources.
+
+        They are indistinguishable from the LODO matrix by those fields alone,
+        but they are summarised in subsample_sweep.csv rather than
+        lodo_results.csv. Only the fraction tag in the experiment id separates
+        them.
+        """
+        import re
+
+        return bool(re.search(r"-f\d{3}_s\d+$", str(registry_row["experiment_id"])))
+
+    def subsample_id(row):
+        return make_experiment_id(
+            protocol="lodo", sources=[d for d in ALL_DOMAINS if d != row["target"]],
+            target=row["target"], backbone=row["backbone"],
+            method=f"{row['method']}-b{int(row['batch_size'])}"
+                   f"-f{int(round(float(row['fraction']) * 100)):03d}",
+            seed=int(row["seed"]),
+        )
+
     return [
         {
             "file": "lodo_results*.csv", "protocol": "lodo",
@@ -143,7 +164,8 @@ def specifications():
             # comparison, which trains on two sources and is summarised in
             # stage_c_*.csv. Without this scope every Stage-C run reads as a
             # row missing from the LODO matrix.
-            "scope": lambda r: r["method"] == "erm" and n_sources(r) == 3,
+            "scope": lambda r: (r["method"] == "erm" and n_sources(r) == 3
+                                and not is_subsample(r)),
             "key": ["target", "method", "seed", "backbone", "image_size"],
             "experiment_id": lodo_id,
             "target_of": lambda row: row["target"],
@@ -161,6 +183,20 @@ def specifications():
             "registry": {"test_qwk": "test_qwk", "test_f1": "test_f1_macro",
                          "test_ece": "test_ece",
                          "test_severe": "test_severe_error_rate",
+                         "n_train": "n_train", "n_test": "n_test"},
+        },
+        {
+            # The sweep, excluded from the LODO scope above and checked here
+            # instead -- silencing a false positive without auditing the runs
+            # somewhere would leave nine experiments unverified.
+            "file": "subsample_sweep*.csv", "protocol": "lodo",
+            "scope": is_subsample,
+            "key": ["target", "method", "seed", "backbone", "image_size", "fraction"],
+            "experiment_id": subsample_id,
+            "target_of": lambda row: row["target"],
+            "registry": {"target_qwk": "test_qwk", "target_f1": "test_f1_macro",
+                         "target_ece": "test_ece",
+                         "target_severe": "test_severe_error_rate",
                          "n_train": "n_train", "n_test": "n_test"},
         },
         {

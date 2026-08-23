@@ -1,0 +1,2 @@
+target,n_matched,largest_n_train,observed_qwk,in_domain_qwk,in_domain_qwk_sd,in_domain_budget,log_slope,log_slope_sd,predicted_at_budget,predicted_at_budget_sd,extrapolation_factor,gap,size_share,shift_share,n_seeds_fitted
+eyepacs,5268,11841,0.4153081179253611,0.7062821023872287,0.013937153137694683,24574,0.0184147448495352,0.007393549639855589,0.43300550913566815,0.0091270283571726,2.075331475382147,0.29097398446186756,0.06082121480048096,0.939178785199519,3
