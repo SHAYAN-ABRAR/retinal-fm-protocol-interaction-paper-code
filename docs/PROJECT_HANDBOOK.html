@@ -521,15 +521,15 @@ pip install -r requirements.txt</div>
     </div>
     <div class="claim">
       <div class="rank">06</div>
-      <h3>Resolution was a binding constraint</h3>
-      <p>At 512 px the in-domain EyePACS model reaches 0.8004 against 0.7090 at 224 px on identical test images. This <strong>falsified</strong> the earlier claim that 0.709 was a label-noise ceiling. How much label noise remains is unmeasured.</p>
-      <div class="ev">+0.0914 [+0.0694, +0.1142] · severe error 0.0919 → 0.0575 · n = 5,268</div>
+      <h3>Resolution is the largest effect in the project</h3>
+      <p>Larger than any method, any backbone, and four times the training data. At 512 px, cross-domain QWK improves on <strong>all four</strong> LODO targets and severe errors fall 18–42%, every row established under both bars. In domain it helps only where headroom remained — DDR and APTOS are within seed noise. The comparison is 512 px at batch 16 against 224 px at batch 32, since batch 32 at 512 px needs ~11 GB, so resolution is the dominant term but not the only one.</p>
+      <div class="ev">EyePACS LODO +0.0967 (4.8× paired seed SD, 3 seeds) · severe errors −18% to −42% · 4 of 4 established</div>
     </div>
     <div class="claim">
       <div class="rank">07</div>
-      <h3>A stronger backbone does not fix calibration</h3>
-      <p>ConvNeXt-Tiny (27.8 M params) beats DenseNet121 (7.0 M) on target QWK on all four targets, yet is <strong>worse calibrated after temperature on three of four</strong>. On APTOS it more than doubles post-temperature ECE for a QWK gain that is not established. <em>This is the answer to "would a better model fix this?"</em></p>
-      <div class="ev">DDR +0.0246 (4.5× seed SD) · EyePACS +0.0585 (7.2×) · APTOS ECE-after-T 0.041 → 0.084 · one seed</div>
+      <h3>A stronger backbone buys discrimination, not calibration</h3>
+      <p>ConvNeXt-Tiny (27.8 M params) beats DenseNet121 (7.0 M) on target QWK on all four targets, established on two. After temperature scaling there is <strong>no established calibration difference on any target</strong> — all four are within seed noise, and both architectures land at the same post-temperature ECE. <em>This is the answer to "would a better model fix this?", and it is the stronger answer: not that the better model is worse calibrated, but that it is no better calibrated.</em> An earlier single-seed version reported "worse on three of four"; seeds 1 and 2 dissolved it.</p>
+      <div class="ev">DDR +0.0253 (2.1× paired seed SD) · EyePACS +0.0554 (4.1×) · calibration: 0 of 4 established · 3 seeds</div>
     </div>
   </div>
 </section>

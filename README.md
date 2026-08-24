@@ -1,14 +1,15 @@
 # Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
 
-> **Status: Phases 1-8 complete. 271 tests pass.**
+> **Status: Phases 1-9 complete. 279 tests pass.**
 >
-> All results below are **224 px**. A 512 px LODO matrix is in progress;
-> see `docs/PHASE6_IN_DOMAIN_REPORT.md` §0a for why that matters.
+> Most results below are **224 px**. The 512 px comparison is complete on the
+> LODO matrix and the in-domain ceilings, and it is the largest effect in the
+> project — see [`docs/PHASE9_RESOLUTION_REPORT.md`](docs/PHASE9_RESOLUTION_REPORT.md).
 > Data provenance and audit, label verification, manifest, deduplication,
 > patient-level splits, passing leakage audit, preprocessing, image cache,
 > training loop, metrics, calibration, bootstrap CIs, selective prediction,
 > ordinal CORAL, Deep CORAL, MixStyle, representation analysis, LaTeX tables,
-> and the experiment registry. **47 runs, 15.6 GPU-hours.**
+> and the experiment registry. **110 runs, 46.4 GPU-hours.**
 >
 > **Headline results, all on 3 seeds:**
 > - Calibration degrades on unseen domains even where accuracy does not
@@ -186,7 +187,9 @@ dr_domain_generalization/
 │   ├── PHASE4_METHOD_COMPARISON.md   # six methods x 3 seeds
 │   ├── PHASE5_LODO_REPORT.md         # the four LODO experiments
 │   ├── PHASE6_IN_DOMAIN_REPORT.md    # in-domain ceilings, deployment cost
-│   ├── PHASE7_CROSS_DOMAIN_MATRIX.md # the 4x4 matrix
+│   ├── PHASE7_CROSS_DOMAIN_MATRIX.md # the 4x4 matrix, size vs shift
+│   ├── PHASE8_BACKBONE_COMPARISON.md # ConvNeXt-Tiny vs DenseNet121
+│   ├── PHASE9_RESOLUTION_REPORT.md   # 512 px vs 224 px
 │   └── PROJECT_HANDBOOK.md/.html     # where everything is + paper guide
 ├── src/
 │   ├── data/       aptos.py, augmentations.py, cache.py, ddr.py

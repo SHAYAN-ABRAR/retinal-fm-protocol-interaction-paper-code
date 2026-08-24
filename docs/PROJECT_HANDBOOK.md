@@ -177,7 +177,8 @@ on it, because a drift makes finished runs silently report as `NOT RUN`.
 | `PHASE5_LODO_REPORT.md` | The four LODO experiments, seed 42. |
 | `PHASE6_IN_DOMAIN_REPORT.md` | In-domain ceilings and the cost of cross-domain deployment. |
 | `PHASE7_CROSS_DOMAIN_MATRIX.md` | The full 4x4 matrix. Multi-source training buys nothing; the lowest-scoring dataset is the best source. Carries a 2026-08-22 correction withdrawing the label-noise mechanism. |
-| `PHASE8_BACKBONE_COMPARISON.md` | ConvNeXt-Tiny vs DenseNet121 on all four LODO targets. **A stronger backbone buys discrimination, not calibration** — the thesis survives its most obvious attack. Also records a contamination that reached the exported LaTeX. |
+| `PHASE8_BACKBONE_COMPARISON.md` | ConvNeXt-Tiny vs DenseNet121, all four LODO targets, 3 seeds. **A stronger backbone buys discrimination, not calibration.** Records what seeds 1 and 2 overturned from its own single-seed first version, and a contamination that reached the exported LaTeX. |
+| `PHASE9_RESOLUTION_REPORT.md` | 512 px vs 224 px, both protocols. **The largest effect in the project** — bigger than any method, backbone or amount of data. Names the batch-size confound it cannot separate. |
 | `PROJECT_HANDBOOK.md` | This file. |
 | `PROJECT_HANDBOOK.html` | Same content as a navigable page (sticky contents, semantic colour on the claim tables). Open it directly from this folder in any browser — no server, no build step, no external host. |
 
@@ -281,22 +282,32 @@ framing for a clinical venue**, and it is the number recalibration cannot
 touch — temperature scaling is monotonic and cannot move an argmax.
 See `PHASE6_IN_DOMAIN_REPORT.md` §2c.
 
-**6. Input resolution was a binding constraint, and 224 px understated the
-in-domain reference.** At 512 px the in-domain EyePACS model reaches 0.8004
-against 0.7090 at 224 px on identical test images (+0.0914, CI [+0.0694,
-+0.1142]), and its severe-error rate falls 0.0919 → 0.0575. This **falsified**
-the earlier claim that 0.709 was a label-noise ceiling. Every 224 px result in
-this project is now labelled as such, and the 512 px LODO matrix is running so
-the comparison can be made at one resolution. See `PHASE6_IN_DOMAIN_REPORT.md`
-§0a.
+**6. Input resolution is the largest effect in the project — larger than any
+method, backbone or amount of data.** At 512 px, cross-domain QWK improves on
+all four LODO targets and severe errors fall 18–42%, every row established under
+both bars. On EyePACS, the hardest target, LODO QWK gains **+0.0967** (3 paired
+seeds, 4.8× seed SD). In domain it helps only where headroom remained: DDR
+(+0.0020) and APTOS (+0.0071) are within seed noise, IDRiD and EyePACS are not.
+It also **falsified** the earlier claim that EyePACS's 0.709 in-domain score was
+a label-noise ceiling.
 
-**7. A stronger backbone does not fix calibration.** ConvNeXt-Tiny (27.8 M
-params) beats DenseNet121 (7.0 M) on target QWK on all four LODO targets —
-decisively on DDR (+0.0246, 4.5× seed SD) and EyePACS (+0.0585, 7.2×) — yet is
-**worse calibrated after temperature scaling on three of four**. On APTOS it
-more than doubles post-temperature ECE (0.0406 → 0.0843) for a QWK gain that is
-not established. *This is the answer to "would a better model fix this?" and a
-reviewer will ask it.* One seed only; see `PHASE8_BACKBONE_COMPARISON.md` §4.
+The comparison is 512 px at batch 16 against 224 px at batch 32 — batch 32 at
+512 px needs ~11 GB and does not fit — so resolution is the dominant term but
+not the only one. See `PHASE9_RESOLUTION_REPORT.md`.
+
+**7. A stronger backbone buys discrimination and not calibration.**
+ConvNeXt-Tiny (27.8 M params) beats DenseNet121 (7.0 M) on target QWK on all
+four LODO targets, established on DDR (+0.0253, 2.1× paired seed SD) and EyePACS
+(+0.0554, 4.1×), and cuts EyePACS severe errors by 17%. After temperature
+scaling there is **no established calibration difference on any target** — all
+four are within seed noise. Both architectures land at post-temperature ECE
+≈ 0.12 on IDRiD and ≈ 0.17 on EyePACS. *This is the answer to "would a better
+model fix this?", and it is the stronger answer: not "the better model is worse
+calibrated" but "the better model is no better calibrated".*
+
+An earlier single-seed version of this reported ConvNeXt as worse calibrated on
+three of four, with APTOS doubling its post-temperature ECE. Seeds 1 and 2
+dissolved that entirely; see `PHASE8_BACKBONE_COMPARISON.md` §7.
 
 ## B2. Recommended paper structure
 

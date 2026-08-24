@@ -174,37 +174,87 @@ all** in this phase. Therefore:
 
 **Resolved.** Seeds 1-2 landed; see §0. Two of the three uncertain deltas turned out to be noise (APTOS +0.004, IDRiD -0.009); the EyePACS one (-0.016) survived and is now supported by both bars.
 
-## 6. Bounding the EyePACS size confound
+## 6. Size versus shift for EyePACS — measured
 
-Phases 5 and 6 could not separate domain shift from training-set size for
-EyePACS. Three points now exist:
+**Superseded by measurement on 2026-08-23.** This section previously bounded the
+split from two points under a log-linear assumption at one seed, and reported
+"roughly one third size, two thirds shift". A subsample sweep has now measured
+it, and the answer is not close to that estimate.
 
-| Training set | n_train | EyePACS QWK |
+### What was run
+
+`run_subsample_sweep.py` trains on 25%, 50% and 75% of the DDR+APTOS+IDRiD
+source pool at three seeds each, **holding the source domains fixed** so that
+training-set size varies and composition does not. Nine runs, 1.06 h GPU. Every
+QWK below is recomputed on the EyePACS in-domain test split (5,268 images) at
+224 px, so the sweep and the in-domain ceiling are scored on identical data at
+identical resolution — the confound the earlier version of this section fell
+into.
+
+| Fraction | n_train | EyePACS QWK (3 seeds) | across-seed SD |
+|---|---|---|---|
+| 25% | 2,962 | 0.3928 | 0.0138 |
+| 50% | 5,921 | 0.4070 | 0.0130 |
+| 75% | 8,879 | 0.4195 | 0.0187 |
+| 100% | 11,841 | 0.4153 | 0.0082 |
+
+Note the fourth row is **lower** than the third. The whole range spanned by
+quadrupling the data, 0.3928 → 0.4195, is 0.0267 — comparable to the across-seed
+SD of any single row.
+
+### The result
+
+Fitted per seed, the slope is **+0.0184 ± 0.0074 QWK per e-fold** of training
+data. Extrapolated to EyePACS's own in-domain budget of 24,574 images — a factor
+of 2.08 beyond the largest point actually run — it predicts **0.4330 ± 0.0091**,
+against **0.7063** achieved in domain.
+
+| | QWK | share of gap |
 |---|---|---|
-| DDR only (cross-domain) | 8,697 | 0.372 |
-| DDR+APTOS+IDRiD (cross-domain) | 11,841 | 0.415 |
-| EyePACS's own (in-domain) | 24,574 | 0.709 |
+| Observed at full source pool | 0.4153 | — |
+| Predicted at in-domain budget | 0.4330 | **6.1%** |
+| Achieved in domain | 0.7063 | — |
+| Total gap | 0.2910 | 100% |
 
-A 36% increase in cross-domain data bought **+0.043**. Extrapolating
-log-linearly, reaching the in-domain budget of 24,574 predicts roughly **+0.10**,
-landing near 0.52 — against the 0.709 achieved in-domain **at 224 px**.
+**Training-set size explains 6% of the EyePACS gap. Domain shift explains 94%.**
 
-On that basis, of the 0.294 gap roughly **one third is training-set size and two
-thirds is domain shift**. This is a bound from two points under a log-linear
-assumption at one seed, not a measurement.
+Quadrupling the training data moves QWK by 0.023 — barely above the seed-to-seed
+variation of the LODO runs themselves. The curve is close to flat.
 
-> **Corrected — the reference point moved.** This decomposition uses the
-> in-domain score as its upper anchor, and Phase 6 §0a raised that anchor from
-> 0.709 to **0.8004** at 512 px. Against the 512 px anchor the gap is 0.385
-> rather than 0.294, so the *same* size extrapolation of +0.10 covers a smaller
-> share: roughly **one quarter size, three quarters shift**.
->
-> Neither split should be quoted yet. The 0.385 version mixes a 512 px anchor
-> with 224 px cross-domain points, which charges the resolution change to domain
-> shift — exactly the error `run_in_domain.py` now refuses to commit. **The
-> honest statement today is that the size/shift split is bounded somewhere
-> between one quarter and one third size**, and the 512 px LODO matrix will
-> settle it at a single resolution.
+### What changed, and why the old estimate was wrong
+
+The earlier bound used **two points** — DDR-only at 8,697 images scoring 0.372,
+and the full pool at 11,841 scoring 0.415. Those two differ in **size and source
+composition at once**: adding APTOS and IDRiD adds images *and* adds two
+domains' worth of appearance variety. The +0.043 between them was therefore
+attributed entirely to size when much of it was diversity, which inflated the
+slope by roughly a factor of three.
+
+The sweep removes that confound by construction: the source domains are the same
+at every fraction.
+
+### What this does NOT establish
+
+- **The extrapolation is 2.08× beyond the data.** 0.4330 is a prediction, not a
+  measurement, and it assumes the log-linear form continues. If the curve is
+  concave — which is the usual shape — the true value is lower and the size share
+  smaller still. 6% is therefore an upper bound on the size contribution as much
+  as an estimate of it.
+- **It says nothing about *diversity*.** Only volume was varied. Adding a fifth
+  and sixth source domain could plausibly do what more images of the same three
+  cannot; that experiment has not been run.
+- **It is specific to EyePACS at 224 px.** The other three targets have no sweep.
+
+### Consequence for the paper
+
+The "EyePACS is just a data-volume problem" objection — the most obvious
+reviewer response to a 0.41 QWK on a 35,108-image target — is answered with a
+measurement rather than an assumption. **More data of the same kind does not
+close this gap.** That is the strongest single piece of support for framing the
+problem as domain shift.
+
+Artifacts: `run_subsample_sweep.py`, `analyse_subsample.py`,
+`outputs/tables/subsample_sweep.csv`, `outputs/tables/subsample_decomposition.csv`.
 
 ## 7. Calibration across the matrix
 
