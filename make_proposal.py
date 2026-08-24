@@ -85,7 +85,11 @@ def gather(outputs):
     if lodo is not None and lodo512 is not None:
         base = lodo[lodo["backbone"] == "densenet121"].groupby("target")
         base = base[["target_qwk", "target_severe"]].mean()
-        new = lodo512.set_index("target")
+        # Averaged over seeds, like the 224 px side. This used set_index, which
+        # was correct only while every target had exactly one 512 px row; once
+        # EyePACS gained seeds 1 and 2, .loc returned a Series and comparing it
+        # raised rather than quietly averaging the wrong thing.
+        new = lodo512.groupby("target")[["target_qwk", "target_severe"]].mean()
         shared = [t for t in ORDER if t in base.index and t in new.index]
         if shared:
             drops = [(new.loc[t, "target_severe"] - base.loc[t, "target_severe"])
