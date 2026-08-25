@@ -123,3 +123,40 @@ def test_missing_backbone_column_in_new_rows_raises() -> None:
     new = _lodo_row("convnext-tiny", 0.7580).drop(columns=["backbone"])
     with pytest.raises(ValueError, match="backbone"):
         merge_results_table(_lodo_row(), new, LODO_KEY)
+
+
+# A key column that exists but is blank
+# ------------------------------------------------------------------
+# The backfill originally fired only when a key column was absent from the
+# file. But a column is created the instant the first run that varies it is
+# written, and every row already in the file gets NaN rather than the old
+# default. Those rows are in exactly the same position as rows in a file with
+# no such column, and must be treated the same way -- NaN never compares equal
+# to False, so without this a natural re-run of an existing configuration
+# appends a second row instead of replacing it, and the seed mean is then taken
+# over a value and its own replacement.
+
+BALANCED_KEY = ["target", "method", "seed", "backbone", "image_size", "domain_balanced"]
+
+
+def _balanced_row(balanced, qwk: float = 0.4077):
+    return pd.DataFrame([{
+        "target": "eyepacs", "method": "erm", "seed": 42,
+        "backbone": "densenet121", "image_size": 224,
+        "domain_balanced": balanced, "qwk": qwk,
+    }])
+
+
+def test_blank_domain_balanced_is_backfilled_not_treated_as_a_new_setting() -> None:
+    merged = merge_results_table(
+        _balanced_row(float("nan"), 0.4077), _balanced_row(False, 0.4099), BALANCED_KEY)
+    assert len(merged) == 1, "a natural re-run duplicated the row it should have replaced"
+    assert merged.iloc[0]["qwk"] == pytest.approx(0.4099)
+    assert not bool(merged.iloc[0]["domain_balanced"])
+
+
+def test_a_balanced_run_still_does_not_overwrite_a_blank_natural_row() -> None:
+    merged = merge_results_table(
+        _balanced_row(float("nan"), 0.4077), _balanced_row(True, 0.4371), BALANCED_KEY)
+    assert len(merged) == 2, "the balanced run overwrote the natural result"
+    assert sorted(round(v, 4) for v in merged["qwk"]) == [0.4077, 0.4371]

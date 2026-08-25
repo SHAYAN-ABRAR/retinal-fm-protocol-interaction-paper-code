@@ -162,8 +162,24 @@ def merge_results_table(previous, new, key: Sequence[str]):
     key = list(key)
     previous = previous.copy()
     for column, historical in KEY_COLUMN_DEFAULTS.items():
-        if column in key and column not in previous.columns:
+        if column not in key:
+            continue
+        if column not in previous.columns:
             previous[column] = historical
+        else:
+            # The column may exist and still be blank on older rows: it is
+            # created the moment the first run that varies it is written, and
+            # every row already in the file gets NaN. Those rows predate the
+            # setting just as surely as rows in a file without the column, so
+            # they take the same historical value. Leaving them NaN does not
+            # merely look untidy -- NaN never equals False, so re-running one of
+            # those configurations appends a second row instead of replacing the
+            # first, and the summary tables then average the two as if a seed had
+            # been added.
+            previous[column] = previous[column].fillna(historical)
+        if column in new.columns:
+            new = new.copy()
+            new[column] = new[column].fillna(historical)
 
     missing = [column for column in key if column not in new.columns]
     if missing:
