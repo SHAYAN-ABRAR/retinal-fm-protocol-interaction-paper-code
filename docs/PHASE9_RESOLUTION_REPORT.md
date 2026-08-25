@@ -2,8 +2,8 @@
 
 **Run:** ERM, DenseNet121, **512 px, batch 16**, 20 epochs
 **Compared against:** ERM, DenseNet121, **224 px, batch 32**, identical otherwise
-**Seeds:** 42 on every cell; **42 / 1 / 2** on LODO EyePACS
-**Date:** 2026-08-22 → 2026-08-24 · 17.1 h GPU over 10 runs
+**Seeds:** 42 on every cell; **42 / 1 / 2** on LODO APTOS, IDRiD and EyePACS
+**Date:** 2026-08-22 → 2026-08-25 · 29.9 h GPU over 14 runs
 **Generator:** `analyse_resolution.py` → `outputs/tables/resolution_comparison.csv`
 
 Phases 4 and 5 established that no domain-generalization method in the
@@ -29,8 +29,8 @@ data.**
 | 4× the training data (extrapolated to the in-domain budget) | +0.0177 | — |
 | Every DG method in Phase 4 | none beat ERM | 0.3 h GPU per run |
 
-Severe errors — misgrades of two steps or more — fall by **17–42%** across the
-four LODO targets, every one of them established under both bars.
+Severe errors — misgrades of two steps or more — fall on all four LODO targets
+and by **22–48%** on the three where the fall clears both bars.
 
 **The uncomfortable part:** this is the largest, cheapest and least novel
 intervention in the study, and it is the one a methods-focused paper would never
@@ -67,14 +67,15 @@ measured, and the distinction is stated wherever the result is.
 
 ## 2. Leave-one-domain-out — the result that matters
 
-| Target | n | 224 px | 512 px | Δ QWK | × seed SD | 95% CI | verdict |
-|---|---|---|---|---|---|---|---|
-| DDR | 12,424 | 0.7334 | **0.7795** | **+0.0461** | 8.4× ¹ | [+0.0366, +0.0561] | **established** |
-| APTOS | 3,504 | 0.8591 | **0.8792** | **+0.0201** | 3.8× ¹ | [+0.0085, +0.0317] | **established** |
-| IDRiD | 507 | 0.7543 | **0.8228** | **+0.0685** | 2.8× ¹ | [+0.0348, +0.1074] | **established** |
-| EyePACS | 35,108 | 0.4147 | **0.5115** | **+0.0967** | **4.8×** | [+0.1112, +0.1280] | **established** |
+| Target | n | seeds | 224 px | 512 px | Δ QWK | × seed SD | 95% CI | verdict |
+|---|---|---|---|---|---|---|---|---|
+| DDR | 12,424 | 1 | 0.7334 | **0.7795** | **+0.0461** | 8.4× ¹ | [+0.0366, +0.0561] | **established** |
+| APTOS | 3,504 | 3 | 0.8590 | 0.8745 | +0.0155 | **1.6×** | [+0.0085, +0.0317] | established, but marginal |
+| IDRiD | 507 | 3 | 0.7413 | **0.8293** | **+0.0880** | 3.4× | [+0.0348, +0.1074] | **established** |
+| EyePACS | 35,108 | 3 | 0.4147 | **0.5115** | **+0.0967** | **4.8×** | [+0.1112, +0.1280] | **established** |
 
-¹ borrowed bar — see §5.
+¹ borrowed bar — see §5. APTOS clears bar 1 by 1.6× against a one-SD threshold
+and should be read as suggestive; see §5.
 
 **EyePACS is the headline.** The hardest target in the study, on which no
 method, no source combination and no recalibration has ever helped, gains
@@ -89,12 +90,18 @@ referable patient home.
 | Target | 224 px | 512 px | Δ | relative | 95% CI | verdict |
 |---|---|---|---|---|---|---|
 | DDR | 0.1666 | 0.1295 | −0.0371 | **−22%** | [−0.0428, −0.0311] | **established** |
-| APTOS | 0.0619 | 0.0511 | −0.0108 | **−18%** | [−0.0194, −0.0023] | **established** |
-| IDRiD | 0.1164 | 0.0671 | −0.0493 | **−42%** | [−0.0750, −0.0256] | **established** |
+| APTOS | 0.0628 | 0.0548 | −0.0080 | −13% | [−0.0194, −0.0023] | within seed noise |
+| IDRiD | 0.1177 | 0.0611 | −0.0565 | **−48%** | [−0.0750, −0.0256] | **established** |
 | EyePACS | 0.2407 | 0.1822 | −0.0585 | **−24%** | [−0.0809, −0.0722] | **established** |
 
-Four out of four, all clearing both bars. On EyePACS this removes roughly one
-severe error in four, on a test set of 35,108 images.
+Three of four clear both bars. On EyePACS this removes roughly one severe error
+in four, on a test set of 35,108 images; on IDRiD nearly half, on 507.
+
+APTOS falls in the right direction on every seed but by less than the seed-to-
+seed variation of that fall. At one seed it read as established (−18%); three
+seeds withdrew it. It is the same target whose QWK row is marginal, and for the
+same reason: APTOS is the easiest domain in the study and has the least room to
+improve.
 
 ## 3. In-domain — where it does *not* help
 
@@ -155,24 +162,36 @@ worth making.
 
 ## 5. What this does NOT establish
 
-- **Seven of the eight rows use a borrowed bar.** Only LODO EyePACS has 512 px
-  seeds 1 and 2. Everywhere else, "× seed SD" divides by the **224 px** across-
-  seed SD, because the 512 px arm has one seed.
+- **DDR under LODO, and all four in-domain rows, still use a borrowed bar.**
+  Those cells have one 512 px seed, so "× seed SD" divides by the **224 px**
+  across-seed SD rather than a measured one.
 
-  That proxy is now known to be optimistic. Measured three times:
+  The proxy is consistently optimistic. Measured four times:
 
-  | Comparison | borrowed SD | true paired SD | ratio |
+  | Comparison | borrowed SD | true paired SD | inflation |
   |---|---|---|---|
   | ConvNeXt vs DenseNet, DDR | 0.0055 | 0.0165 | 3.0× |
   | ConvNeXt vs DenseNet, APTOS | 0.0054 | 0.0109 | 2.0× |
   | 512 px vs 224 px, EyePACS LODO | 0.0081 | 0.0201 | 2.5× |
+  | 512 px vs 224 px, APTOS LODO | 0.0054 | 0.0094 | 1.7× |
 
-  Applying a 2.5× correction to the borrowed rows in §2: DDR falls 8.4× → 3.3×
-  and survives; **APTOS falls 3.8× → 1.5× and IDRiD 2.8× → 1.1×, both below the
-  threshold.** Those two verdicts are the ones at risk, and 512 px seeds 1 and 2
-  for APTOS and IDRiD are running to settle them (~13 h, started 2026-08-24).
-  Until they land, **treat LODO APTOS and LODO IDRiD as provisional.** DDR,
-  EyePACS and both established in-domain rows survive the correction.
+  APTOS and IDRiD were run with seeds 1 and 2 on 2026-08-24 (13 h) precisely
+  because they were the rows a real SD could move. **Both survived**, but not
+  equally: IDRiD strengthened from 2.8× to **3.4×**, while APTOS fell from 3.8×
+  to **1.64×** and is now the weakest established row in the phase.
+
+  DDR's remaining borrowed ratio of 8.4× would still clear at any inflation
+  observed so far. The in-domain rows are 6.9× (IDRiD) and 6.6× (EyePACS)
+  established, and 0.2× / 0.7× null, so neither direction is close enough to
+  the boundary for the proxy to be deciding them.
+
+- **Bar 1 is a one-SD threshold, and APTOS is close to it.** The project's
+  criterion throughout is `|Δ| > SD(Δ)` — the effect must exceed *one* across-
+  seed standard deviation, not two. APTOS clears it at 1.64× on three seeds,
+  where the SD is itself estimated from three numbers and carries roughly 40%
+  relative uncertainty. **Read APTOS as suggestive rather than solid**, and do
+  not quote it beside DDR, IDRiD and EyePACS as though the four were equally
+  supported. Two more seeds would settle it; nothing else will.
 
 - **That the cause is pixels rather than batch size.** See §1. No run separates
   them on 8 GB.

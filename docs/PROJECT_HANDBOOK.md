@@ -284,9 +284,10 @@ See `PHASE6_IN_DOMAIN_REPORT.md` §2c.
 
 **6. Input resolution is the largest effect in the project — larger than any
 method, backbone or amount of data.** At 512 px, cross-domain QWK improves on
-all four LODO targets and severe errors fall 18–42%, every row established under
-both bars. On EyePACS, the hardest target, LODO QWK gains **+0.0967** (3 paired
-seeds, 4.8× seed SD). In domain it helps only where headroom remained: DDR
+all four LODO targets, and severe errors fall 22–48% on the three where that
+fall clears both bars. On EyePACS, the hardest target, LODO QWK gains **+0.0967**
+(3 paired seeds, 4.8× seed SD). APTOS is the weak row on both metrics — QWK
+marginal at 1.6×, severe errors within seed noise. In domain it helps only where headroom remained: DDR
 (+0.0020) and APTOS (+0.0071) are within seed noise, IDRiD and EyePACS are not.
 It also **falsified** the earlier claim that EyePACS's 0.709 in-domain score was
 a label-noise ceiling.
