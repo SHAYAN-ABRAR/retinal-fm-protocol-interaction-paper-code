@@ -25,6 +25,22 @@ public datasets" without enumerating the latter in the accessible text. That
 uncertainty is recorded in PRETRAINING_OVERLAP and belongs in the paper's
 limitations, not in a comment nobody reads.
 
+What the checkpoint actually is
+-------------------------------
+Read from the checkpoint's own ``args``, not from the paper: 801 epochs of MAE
+at mask ratio 0.85, input 224, ``mae_vit_large_patch16``, resumed from
+``mae_pretrain_vit_large_full.pth``. That last detail matters for describing the
+model honestly -- RETFound is **ImageNet MAE weights continued on retina**, not
+a model trained on retinal images alone.
+
+The file is 3.7 GB because it carries the optimiser state and the MAE decoder;
+294 of its 398 tensors are the encoder and the rest are discarded here.
+
+Normalisation matches this project's pipeline: MAE pretraining used ImageNet
+mean/std, and ``AugmentationConfig`` defaults to ``IMAGENET_MEAN``/``IMAGENET_STD``.
+Feeding RETFound differently normalised inputs would degrade its features while
+leaving everything looking like it ran correctly.
+
 Obtaining the weights
 ---------------------
 The checkpoint is a gated Hugging Face repo and cannot be downloaded
