@@ -132,6 +132,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         },
         feature_loss=built.feature_loss,
         batch_hook=built.batch_hook,
+        objective_fn=built.objective_fn,
         to_probabilities=built.to_probabilities,
     )
     trainer.resume()

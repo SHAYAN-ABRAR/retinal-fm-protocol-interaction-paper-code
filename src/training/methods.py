@@ -42,6 +42,8 @@ from torch import nn
 
 from ..losses.classification import build_classification_loss
 from ..losses.deep_coral_alignment import DeepCoralLoss
+from ..losses.group_dro import GroupDROObjective
+from ..losses.irm import IRMObjective
 from ..losses.ordinal_coral_loss import (
     CoralOrdinalLoss,
     coral_predict,
@@ -63,6 +65,8 @@ METHODS = (
     "mixstyle",
     "mixstyle_ordinal",
     "deep_coral_ordinal",
+    "groupdro",
+    "irm",
 )
 
 
@@ -79,6 +83,12 @@ class MethodConfig:
     mixstyle_p: float = 0.5
     mixstyle_alpha: float = 0.1
     mixstyle_stages: int = 2
+    # GroupDRO's group-weight step size and IRM's penalty schedule. Both are
+    # SOURCE-side hyperparameters at their published defaults; neither has been
+    # tuned, and neither may be tuned on a held-out target.
+    groupdro_eta: float = 0.01
+    irm_lambda: float = 100.0
+    irm_anneal_iters: int = 500
     ordinal_importance_weights: bool = False
     label_smoothing: float = 0.0
 
@@ -98,6 +108,14 @@ class MethodConfig:
     def uses_mixstyle(self) -> bool:
         return "mixstyle" in self.name
 
+    @property
+    def uses_groupdro(self) -> bool:
+        return self.name == "groupdro"
+
+    @property
+    def uses_irm(self) -> bool:
+        return self.name == "irm"
+
     def describe(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "method": self.name,
@@ -106,9 +124,16 @@ class MethodConfig:
             "domain_generalization": (
                 "deep_coral" if self.uses_deep_coral
                 else "mixstyle" if self.uses_mixstyle
+                else "groupdro" if self.uses_groupdro
+                else "irm" if self.uses_irm
                 else "none"
             ),
         }
+        if self.uses_groupdro:
+            payload["groupdro_eta"] = self.groupdro_eta
+        if self.uses_irm:
+            payload.update(irm_lambda=self.irm_lambda,
+                           irm_anneal_iters=self.irm_anneal_iters)
         if self.uses_deep_coral:
             payload["coral_lambda"] = self.coral_lambda
         if self.uses_mixstyle:
@@ -128,6 +153,8 @@ class BuiltMethod:
     loss_fn: nn.Module
     feature_loss: nn.Module | None = None
     batch_hook: Callable[[nn.Module, torch.Tensor], Any] | None = None
+    # Replaces the task loss rather than adding to it -- see Trainer.objective_fn.
+    objective_fn: nn.Module | None = None
     to_probabilities: Callable[[torch.Tensor], torch.Tensor] | None = None
     # The head's own decision rule. None means argmax of the probabilities,
     # which is correct for a softmax head. The ordinal head supplies CORAL's
@@ -141,6 +168,8 @@ class BuiltMethod:
         stats: dict[str, Any] = {}
         if self.feature_loss is not None and hasattr(self.feature_loss, "statistics"):
             stats["deep_coral"] = self.feature_loss.statistics()
+        if self.objective_fn is not None and hasattr(self.objective_fn, "statistics"):
+            stats["objective"] = self.objective_fn.statistics()
         modules = mixstyle_modules(self.model)
         if modules:
             stats["mixstyle"] = modules[0].statistics()
@@ -206,6 +235,18 @@ def build_method(
         feature_loss = DeepCoralLoss(weight=method.coral_lambda)
         description["feature_loss"] = "deep_coral"
 
+    objective_fn: nn.Module | None = None
+    if method.uses_groupdro:
+        objective_fn = GroupDROObjective(
+            eta=method.groupdro_eta, label_smoothing=method.label_smoothing)
+        description["objective"] = "groupdro"
+    elif method.uses_irm:
+        objective_fn = IRMObjective(
+            penalty_weight=method.irm_lambda,
+            anneal_iters=method.irm_anneal_iters,
+            label_smoothing=method.label_smoothing)
+        description["objective"] = "irm"
+
     batch_hook: Callable[[nn.Module, torch.Tensor], Any] | None = None
     if method.uses_mixstyle:
         inserted = insert_mixstyle(
@@ -229,6 +270,7 @@ def build_method(
         loss_fn=loss_fn,
         feature_loss=feature_loss,
         batch_hook=batch_hook,
+        objective_fn=objective_fn,
         to_probabilities=to_probabilities,
         predict_fn=predict_fn,
         description=description,

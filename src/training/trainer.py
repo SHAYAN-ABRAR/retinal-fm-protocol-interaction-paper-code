@@ -263,6 +263,7 @@ class Trainer:
         feature_loss: nn.Module | None = None,
         batch_hook: Callable[[nn.Module, torch.Tensor], Any] | None = None,
         to_probabilities: Callable[[torch.Tensor], torch.Tensor] | None = None,
+        objective_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor] | None = None,
     ) -> None:
         """Hooks let the Phase-4 methods reuse this loop instead of forking it.
 
@@ -270,6 +271,13 @@ class Trainer:
             Called as ``feature_loss(features, domain_ids)`` and ADDED to the task
             loss. This is where Deep CORAL plugs in. When set, the model is asked
             for its pooled features, so it must accept ``return_features=True``.
+        objective_fn:
+            Called as ``objective_fn(logits, targets, domain_ids)`` and REPLACES
+            the task loss entirely. GroupDRO and IRM need this: one reweights the
+            per-domain means and the other adds a penalty computed from logits and
+            targets, and neither can be expressed as a term added to an already-
+            reduced scalar. Validation loss still uses ``loss_fn``, so model
+            selection stays on the same criterion for every method.
         batch_hook:
             Called as ``batch_hook(model, domain_ids)`` before each forward pass.
             MixStyle uses it to learn which samples came from which domain.
@@ -286,6 +294,8 @@ class Trainer:
         self.extra_config = extra_config or {}
         self.feature_loss = feature_loss.to(device) if feature_loss is not None else None
         self.batch_hook = batch_hook
+        self.objective_fn = (objective_fn.to(device)
+                             if isinstance(objective_fn, nn.Module) else objective_fn)
         self.to_probabilities = to_probabilities
 
         self.checkpoints = CheckpointManager(
@@ -373,7 +383,12 @@ class Trainer:
 
             # Loss in float32 even under autocast: fp16 log-softmax loses the
             # precision that the calibration metrics depend on.
-            loss = self.loss_fn(logits.float(), targets)
+            if self.objective_fn is not None:
+                # GroupDRO / IRM: the method owns the reduction, so it is handed
+                # the domain labels and returns the training loss outright.
+                loss = self.objective_fn(logits.float(), targets, domains)
+            else:
+                loss = self.loss_fn(logits.float(), targets)
             task_loss_value = float(loss.item())
 
             if need_features:
