@@ -20,6 +20,7 @@ Usage:
     python run_lodo.py                                # ERM, all four targets, seed 42
     python run_lodo.py --method mixstyle --seeds 42
     python run_lodo.py --targets idrid,eyepacs
+    python run_lodo.py --method groupdro --domain-balanced --targets eyepacs
 """
 
 from __future__ import annotations
@@ -36,6 +37,9 @@ IMAGE_SIZE = 224
 BACKBONE = "densenet121"
 BATCH_SIZE = 32
 EPOCHS = 20
+# Domain-balanced batches. Off by default so every existing run is reproducible
+# by rerunning this file; set by main() via --domain-balanced.
+DOMAIN_BALANCED = False
 ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 
 
@@ -50,6 +54,11 @@ def _method_tag(method_name: str) -> str:
     tag = f"{method_name}-b{BATCH_SIZE}"
     if IMAGE_SIZE != 224:
         tag += f"-r{IMAGE_SIZE}"
+    if DOMAIN_BALANCED:
+        # Without this a domain-balanced run and an ordinary one share an id and
+        # the second silently destroys the first's checkpoint and predictions --
+        # and the pair only exists in order to be compared.
+        tag += "-dbal"
     return tag
 
 
@@ -94,7 +103,10 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         print(f"    {note}", flush=True)
 
     augment = AugmentationConfig(image_size=IMAGE_SIZE)
-    loader_config = LoaderConfig(batch_size=BATCH_SIZE, num_workers=2, seed=seed)
+    loader_config = LoaderConfig(
+        batch_size=BATCH_SIZE, num_workers=2, seed=seed,
+        domain_balanced_batches=DOMAIN_BALANCED,
+    )
     loaders = build_loaders(
         experiment,
         loader_config=loader_config,
@@ -213,6 +225,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
     row = {
         "target": target, "method": method_name, "seed": seed,
         "image_size": IMAGE_SIZE, "backbone": BACKBONE, "batch_size": BATCH_SIZE,
+        "domain_balanced": DOMAIN_BALANCED,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
         "target_qwk": target_result.metrics["qwk"],
@@ -268,6 +281,11 @@ def main() -> None:
     BATCH_SIZE = int(_take("--batch-size", str(BATCH_SIZE)))
     IMAGE_SIZE = int(_take("--image-size", str(IMAGE_SIZE)))
 
+    global DOMAIN_BALANCED
+    if "--domain-balanced" in arguments:
+        arguments.remove("--domain-balanced")
+        DOMAIN_BALANCED = True
+
     from src.models.backbones import SUPPORTED_BACKBONES
 
     if BACKBONE not in SUPPORTED_BACKBONES:
@@ -277,7 +295,8 @@ def main() -> None:
 
     print(
         f"leave-one-domain-out: method={method}, seeds={seeds}, targets={targets}\n"
-        f"  backbone={BACKBONE}, batch={BATCH_SIZE}, epochs={EPOCHS}",
+        f"  backbone={BACKBONE}, batch={BATCH_SIZE}, epochs={EPOCHS}"
+        f"{', domain-balanced batches' if DOMAIN_BALANCED else ''}",
         flush=True,
     )
 

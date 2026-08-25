@@ -79,6 +79,17 @@ class LoaderConfig:
     prefetch_factor: int = 2
     drop_last_train: bool = True
     balanced_sampling: bool = False
+    # Domain-balanced BATCHES, which is a different thing from balanced_sampling
+    # above: that one equalises the class prior, this one equalises the domain
+    # prior *within every batch*. Deep CORAL, MixStyle, GroupDRO and IRM all need
+    # several domains per batch to function at all; on the EyePACS-target pool
+    # IDRiD supplies 0.9 images per batch of 32 under ordinary shuffling, so
+    # those methods effectively never see it. Off by default: it changes the
+    # domain prior and so is a different experiment, not a free improvement.
+    domain_balanced_batches: bool = False
+    # "natural" keeps the step count equal to a shuffled loader's, so a balanced
+    # arm and an unbalanced arm are comparable. See domain_balanced_batch_indices.
+    domain_balanced_epoch: str = "natural"
     seed: int = 42
 
     def describe(self) -> dict[str, Any]:
@@ -88,6 +99,9 @@ class LoaderConfig:
             "num_workers": self.num_workers,
             "persistent_workers": self.persistent_workers,
             "balanced_sampling": self.balanced_sampling,
+            "domain_balanced_batches": self.domain_balanced_batches,
+            "domain_balanced_epoch": (
+                self.domain_balanced_epoch if self.domain_balanced_batches else None),
         }
 
 
@@ -166,8 +180,24 @@ def build_loaders(
         )
 
     sampler = None
+    batch_sampler = None
     shuffle = True
-    if loader_config.balanced_sampling:
+    if loader_config.domain_balanced_batches:
+        from ..losses.deep_coral_alignment import domain_balanced_batch_indices
+
+        if loader_config.balanced_sampling:
+            raise ValueError(
+                "balanced_sampling (class prior) and domain_balanced_batches "
+                "(domain prior) cannot both be on: they are two different "
+                "resamplings of the same loader and would silently compose")
+        batch_sampler = domain_balanced_batch_indices(
+            experiment.train["domain_id"].astype(int).tolist(),
+            batch_size=loader_config.batch_size,
+            generator=generator,
+            epoch_length=loader_config.domain_balanced_epoch,
+        )
+        shuffle = False
+    elif loader_config.balanced_sampling:
         from ..losses.classification import make_balanced_sampler
 
         sampler = make_balanced_sampler(
@@ -178,7 +208,16 @@ def build_loaders(
         shuffle = False        # a sampler and shuffle are mutually exclusive
 
     loaders = {
+        # batch_sampler is mutually exclusive with batch_size/shuffle/sampler/
+        # drop_last, so the two cases are built separately rather than passing
+        # None for four arguments and relying on torch to accept it.
         "train": DataLoader(
+            _dataset(experiment.train, train_transform),
+            batch_sampler=batch_sampler,
+            worker_init_fn=seed_worker,
+            generator=generator,
+            **common,
+        ) if batch_sampler is not None else DataLoader(
             _dataset(experiment.train, train_transform),
             batch_size=loader_config.batch_size,
             shuffle=shuffle,

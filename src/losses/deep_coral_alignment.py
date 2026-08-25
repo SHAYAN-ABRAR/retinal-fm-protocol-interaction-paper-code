@@ -167,6 +167,7 @@ def domain_balanced_batch_indices(
     batch_size: int,
     generator: torch.Generator | None = None,
     drop_last: bool = True,
+    epoch_length: str = "largest_domain",
 ) -> list[list[int]]:
     """Batch indices holding an equal number of samples from each domain.
 
@@ -179,6 +180,24 @@ def domain_balanced_batch_indices(
     small domains are oversampled relative to natural frequency -- a real
     trade-off, recorded in the experiment config, not hidden: it changes the
     effective class prior as well as the domain prior.
+
+    ``epoch_length`` decides how many batches make an epoch, and the choice is
+    load-bearing when this sampler is compared against ordinary shuffling:
+
+    ``"largest_domain"``
+        Enough batches to pass through the largest domain once. On the
+        EyePACS-target pool that is 869 batches of 30 = 26,070 samples against a
+        natural epoch of 11,841 -- so the run takes 2.2x as long **and takes
+        2.2x as many optimisation steps**. A method trained that way beating a
+        baseline trained the ordinary way would be confounded with having simply
+        trained longer.
+
+    ``"natural"``
+        ``len(domain_ids) // batch_size`` batches, matching what ordinary
+        shuffling would give. Every batch still contains every domain; the small
+        domains simply cycle fewer times. This is the setting to use when the
+        balanced and unbalanced arms must be comparable, which is the reason the
+        option exists.
     """
     tensor = torch.as_tensor(list(domain_ids))
     domains = torch.unique(tensor).tolist()
@@ -195,8 +214,16 @@ def domain_balanced_batch_indices(
         order = torch.randperm(len(indices), generator=generator)
         pools[domain] = indices[order].tolist()
 
-    # One epoch is defined by the largest domain, so no domain is truncated.
-    n_batches = max(len(pool) for pool in pools.values()) // per_domain
+    if epoch_length == "largest_domain":
+        # No domain is truncated, at the cost of a longer epoch.
+        n_batches = max(len(pool) for pool in pools.values()) // per_domain
+    elif epoch_length == "natural":
+        # Same number of steps an ordinary shuffled loader would take, so the
+        # two samplers can be compared without a training-budget confound.
+        n_batches = len(tensor) // batch_size
+    else:
+        raise ValueError(
+            f"epoch_length must be 'largest_domain' or 'natural', got {epoch_length!r}")
     cursors = {domain: 0 for domain in domains}
 
     batches: list[list[int]] = []
