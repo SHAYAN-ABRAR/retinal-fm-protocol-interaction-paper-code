@@ -71,6 +71,18 @@ SUPPORTED_BACKBONES: dict[str, dict[str, Any]] = {
         "patch_multiple": 14,
         "notes": "self-supervised ViT-S/14; freeze most blocks initially",
     },
+    "retfound_cfp": {
+        "timm_name": "vit_large_patch16_224",
+        "patch_multiple": 16,
+        # pretrained=False in timm: the ImageNet weights would be loaded and then
+        # overwritten, wasting a download and briefly hiding a failed RETFound
+        # load behind a model that is not random but is not RETFound either.
+        "timm_pretrained": False,
+        "weight_loader": "retfound",
+        "notes": ("RETFound ViT-L/16 (Zhou 2023), MAE-pretrained on retina. "
+                  "EyePACS is in its pretraining corpus and must not be used as "
+                  "a held-out target -- see src/models/retfound.py"),
+    },
 }
 
 
@@ -181,14 +193,24 @@ def build_model(config: BackboneConfig) -> DRModel:
     spec = SUPPORTED_BACKBONES[config.name]
 
     kwargs: dict[str, Any] = {
-        "pretrained": config.pretrained,
+        # A backbone with its own weight file must not also pull timm's: the
+        # download is wasted, and a failed custom load would leave ImageNet
+        # weights in place rather than something obviously broken.
+        "pretrained": config.pretrained and spec.get("timm_pretrained", True),
         "num_classes": 0,        # timm returns pooled features
     }
-    if spec["patch_multiple"] == 14:
+    if spec["patch_multiple"] in (14, 16) and "vit_" in spec["timm_name"]:
         # ViTs need to know the input size so position embeddings are interpolated.
         kwargs["img_size"] = config.image_size
 
     backbone = timm.create_model(spec["timm_name"], **kwargs)
+
+    if config.pretrained and spec.get("weight_loader") == "retfound":
+        from .retfound import load_retfound_weights
+
+        config.extra["retfound"] = load_retfound_weights(
+            backbone, config.extra.get("checkpoint"))
+
     feature_dim = int(backbone.num_features)
 
     model = DRModel(backbone, feature_dim, config)
