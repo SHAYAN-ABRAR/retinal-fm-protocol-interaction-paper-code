@@ -105,3 +105,65 @@ def test_experiment_id_distinguishes_a_balanced_run():
 
     assert plain != balanced
     assert balanced.endswith("-dbal_s42")
+
+
+def test_a_balanced_run_cannot_overwrite_its_own_control():
+    """The dedup key must separate the two samplers.
+
+    The results table's "method" column holds the bare method name, not the
+    experiment-id tag, so an ERM run with domain-balanced batches and one
+    without are identical in every other key field. Keyed without
+    domain_balanced, saving the balanced run deletes the unbalanced row -- which
+    is the control it exists to be compared against. Verified here against a
+    real merge rather than by inspection, because the same class of collision
+    has already destroyed results twice in this project.
+    """
+    import pandas as pd
+
+    from src.utils.registry import merge_results_table
+
+    existing = pd.DataFrame([{
+        "target": "eyepacs", "method": "erm", "seed": 42,
+        "backbone": "densenet121", "image_size": 224, "target_qwk": 0.4077,
+    }])
+    balanced = pd.DataFrame([{
+        "target": "eyepacs", "method": "erm", "seed": 42,
+        "backbone": "densenet121", "image_size": 224,
+        "domain_balanced": True, "target_qwk": 0.5,
+    }])
+
+    key = ["target", "method", "seed", "backbone", "image_size", "domain_balanced"]
+    merged = merge_results_table(existing, balanced, key)
+    assert len(merged) == 2, "both samplers' rows must survive the merge"
+    assert sorted(round(float(q), 4) for q in merged["target_qwk"]) == [0.4077, 0.5]
+
+    # The pre-existing row predates the column and must be backfilled to False,
+    # not left as NaN -- bool(nan) is True, which would flip it to "balanced".
+    unbalanced = merged[~merged["domain_balanced"].astype(bool)]
+    assert len(unbalanced) == 1
+    assert float(unbalanced.iloc[0]["target_qwk"]) == pytest.approx(0.4077)
+
+
+def test_analyses_exclude_balanced_rows_by_default():
+    """A three-seed ERM summary must not average across two samplers."""
+    for name in ("export_paper_tables.py", "analyse_lodo.py",
+                 "analyse_lodo_seeds.py", "analyse_selective.py"):
+        source = (Path(__file__).resolve().parents[1] / name).read_text(encoding="utf-8")
+        assert "domain_balanced" in source, (
+            f"{name} reads lodo_results.csv and would pool both samplers")
+
+
+def test_cli_flag_sets_the_tag():
+    import run_lodo
+
+    original = run_lodo.DOMAIN_BALANCED
+    try:
+        run_lodo.DOMAIN_BALANCED = True
+        assert run_lodo._method_tag("erm") == "erm-b32-dbal"
+        run_lodo.IMAGE_SIZE = 512
+        run_lodo.BATCH_SIZE = 16
+        assert run_lodo._method_tag("irm") == "irm-b16-r512-dbal"
+    finally:
+        run_lodo.DOMAIN_BALANCED = original
+        run_lodo.IMAGE_SIZE = 224
+        run_lodo.BATCH_SIZE = 32

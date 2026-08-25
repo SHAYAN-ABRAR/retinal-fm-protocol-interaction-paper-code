@@ -45,7 +45,8 @@ TOLERANCE = 1e-6
 # Columns that were added to the summary tables after some rows had been
 # written. A row lacking them predates any run at another setting, so it is
 # backfilled to the project default rather than reported as a fault.
-DEFAULTS = {"backbone": "densenet121", "image_size": 224, "batch_size": 32}
+DEFAULTS = {"backbone": "densenet121", "image_size": 224, "batch_size": 32,
+            "domain_balanced": False}
 
 
 class Audit:
@@ -129,6 +130,11 @@ def specifications():
         tag = f"{row['method']}-b{int(row['batch_size'])}"
         if int(row["image_size"]) != 224:
             tag += f"-r{int(row['image_size'])}"
+        # Mirrors run_lodo._method_tag. Without this the audit rebuilds the
+        # ordinary-sampler id for a domain-balanced row, then either matches the
+        # wrong run or reports both as orphans.
+        if bool(row.get("domain_balanced", False)):
+            tag += "-dbal"
         return tag
 
     def n_sources(registry_row) -> int:
@@ -164,9 +170,17 @@ def specifications():
             # comparison, which trains on two sources and is summarised in
             # stage_c_*.csv. Without this scope every Stage-C run reads as a
             # row missing from the LODO matrix.
-            "scope": lambda r: (r["method"] == "erm" and n_sources(r) == 3
-                                and not is_subsample(r)),
-            "key": ["target", "method", "seed", "backbone", "image_size"],
+            # Every method run through run_lodo.py lands in this table, not just
+            # ERM: the DG comparison (deep_coral, mixstyle, groupdro, irm) writes
+            # here too. Scoping this to ERM would leave those runs matching no
+            # spec at all, which the orphan check reports -- and, worse, would
+            # leave their table rows unverified against the registry.
+            #
+            # Two-source runs are the Stage-C comparison, summarised in
+            # stage_c_*.csv and audited there.
+            "scope": lambda r: n_sources(r) == 3 and not is_subsample(r),
+            "key": ["target", "method", "seed", "backbone", "image_size",
+                    "domain_balanced"],
             "experiment_id": lodo_id,
             "target_of": lambda row: row["target"],
             # table column -> registry column

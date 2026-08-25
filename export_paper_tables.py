@@ -59,6 +59,13 @@ def main() -> None:
     if lodo.exists():
         frame = pd.read_csv(lodo)
         frame = frame[frame["method"] == "erm"]
+        # lodo_results.csv now also holds domain-balanced-sampler runs, whose
+        # "method" column reads exactly the same as their ordinary-sampler
+        # counterparts -- only the experiment id distinguishes them. Without this
+        # filter an ERM three-seed summary would silently average six rows from two
+        # different samplers and report the spread between them as seed noise.
+        if "domain_balanced" in frame.columns:
+            frame = frame[~frame["domain_balanced"].fillna(False).astype(bool)]
         # The table also holds the ConvNeXt-Tiny backbone comparison. Without
         # this filter its seed-42 rows join the DenseNet121 seeds and the
         # "across-seed SD" becomes an across-architecture SD -- which is how

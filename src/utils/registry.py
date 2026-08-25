@@ -131,6 +131,14 @@ def load_registry(registry_path: Path | str) -> Any:
     return pd.read_csv(registry_path)
 
 
+# The value a key column had before it was recorded. Adding a column here is
+# what makes it safe to add to a dedup key on a file written before it existed.
+KEY_COLUMN_DEFAULTS: dict[str, object] = {
+    "image_size": 224,
+    "domain_balanced": False,
+}
+
+
 def merge_results_table(previous, new, key: Sequence[str]):
     """Merge new summary rows into an existing results table.
 
@@ -141,15 +149,21 @@ def merge_results_table(previous, new, key: Sequence[str]):
     only visible by comparing against the experiment registry, whose key is the
     experiment id and does encode resolution.
 
-    Rows written before ``image_size`` was recorded predate any run at another
-    resolution, so they are backfilled to 224 rather than dropped.
+    Rows written before a key column existed predate any run that varied it, so
+    they are backfilled to that setting's historical value rather than dropped.
+    ``image_size`` was the first such column (everything before it was 224 px);
+    ``domain_balanced`` is the second (everything before it used ordinary
+    shuffling). Without the backfill, adding a column to ``key`` raises KeyError
+    on the existing file -- and the tempting fix, leaving it out of the key, is
+    exactly what let a 512 px run overwrite a 224 px one.
     """
     import pandas as pd
 
     key = list(key)
     previous = previous.copy()
-    if "image_size" in key and "image_size" not in previous.columns:
-        previous["image_size"] = 224
+    for column, historical in KEY_COLUMN_DEFAULTS.items():
+        if column in key and column not in previous.columns:
+            previous[column] = historical
 
     missing = [column for column in key if column not in new.columns]
     if missing:

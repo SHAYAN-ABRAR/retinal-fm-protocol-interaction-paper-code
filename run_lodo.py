@@ -190,6 +190,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "method": method_name, "loss": built.description.get("loss"),
         "imbalance_strategy": method.imbalance_strategy,
         "image_size": IMAGE_SIZE, "batch_size": BATCH_SIZE,
+        "domain_balanced": DOMAIN_BALANCED,
         "accumulation_steps": 1, "effective_batch_size": BATCH_SIZE,
         "learning_rate": 3e-4, "weight_decay": 1e-4,
         "epochs_planned": EPOCHS, "epochs_run": len(history), "seed": seed,
@@ -316,7 +317,14 @@ def main() -> None:
             # a bar the two-bar criterion depends on.
             frame = merge_results_table(
                 pd.read_csv(path), frame,
-                ["target", "method", "seed", "backbone", "image_size"],
+                # domain_balanced belongs here for the same reason backbone and
+                # image_size do: the row's "method" column holds "erm", not the
+                # tag, so an ERM run with domain-balanced batches and one without
+                # are indistinguishable by the other four fields and the second
+                # would overwrite the first -- destroying the control it exists
+                # to be compared against.
+                ["target", "method", "seed", "backbone", "image_size",
+                 "domain_balanced"],
             )
             frame = frame.sort_values(
                 ["backbone", "seed", "target"]).reset_index(drop=True)

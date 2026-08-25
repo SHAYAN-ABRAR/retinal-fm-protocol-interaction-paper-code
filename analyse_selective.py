@@ -79,6 +79,13 @@ def main() -> None:
         return
     frame = pd.read_csv(results)
     frame = frame[frame["method"] == method]
+    # lodo_results.csv now also holds domain-balanced-sampler runs, whose
+    # "method" column reads exactly the same as their ordinary-sampler
+    # counterparts -- only the experiment id distinguishes them. Without this
+    # filter an ERM three-seed summary would silently average six rows from two
+    # different samplers and report the spread between them as seed noise.
+    if "domain_balanced" in frame.columns:
+        frame = frame[~frame["domain_balanced"].fillna(False).astype(bool)]
     # lodo_results.csv holds every backbone that has been run. Filtering on
     # method and seed alone would pool DenseNet121 with ConvNeXt-Tiny; rows
     # written before the column existed are DenseNet121.
