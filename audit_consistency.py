@@ -154,6 +154,26 @@ def specifications():
 
         return bool(re.search(r"-f\d{3}_s\d+$", str(registry_row["experiment_id"])))
 
+    def is_linear_probe(registry_row) -> bool:
+        """Frozen-feature linear probes register as protocol=lodo, three sources.
+
+        They are a different protocol from everything else in lodo_results.csv:
+        the backbone is frozen and only a linear head is trained. Pooling them
+        into that table would put a linear probe and a fine-tuned network in the
+        same seed mean, which is how a Phase 5 summary would quietly acquire a
+        row that answers a different question. They are summarised in
+        retfound_probe_results.csv and audited against it below.
+        """
+        return str(registry_row["method"]) == "linprobe"
+
+    def probe_id(row):
+        return make_experiment_id(
+            protocol="lodo", sources=[d for d in ALL_DOMAINS if d != row["target"]],
+            target=row["target"], backbone=row["backbone"],
+            method=f"{row['method']}-b{int(row['batch_size'])}",
+            seed=int(row["seed"]),
+        )
+
     def subsample_id(row):
         return make_experiment_id(
             protocol="lodo", sources=[d for d in ALL_DOMAINS if d != row["target"]],
@@ -178,7 +198,11 @@ def specifications():
             #
             # Two-source runs are the Stage-C comparison, summarised in
             # stage_c_*.csv and audited there.
-            "scope": lambda r: n_sources(r) == 3 and not is_subsample(r),
+            #
+            # Frozen-feature linear probes are excluded for the same reason and
+            # audited against retfound_probe_results.csv instead.
+            "scope": lambda r: (n_sources(r) == 3 and not is_subsample(r)
+                                and not is_linear_probe(r)),
             "key": ["target", "method", "seed", "backbone", "image_size",
                     "domain_balanced"],
             "experiment_id": lodo_id,
@@ -214,6 +238,20 @@ def specifications():
                          "n_train": "n_train", "n_test": "n_test"},
         },
         {
+            # Frozen-feature linear probes, excluded from the LODO scope above.
+            # Auditing them somewhere is the point: silencing the orphan report
+            # without checking them would leave nine experiments unverified.
+            "file": "retfound_probe_results*.csv", "protocol": "lodo",
+            "scope": is_linear_probe,
+            "key": ["target", "method", "seed", "backbone", "image_size"],
+            "experiment_id": probe_id,
+            "target_of": lambda row: row["target"],
+            "registry": {"target_qwk": "test_qwk", "target_f1": "test_f1_macro",
+                         "target_ece": "test_ece",
+                         "target_severe": "test_severe_error_rate",
+                         "n_train": "n_train", "n_test": "n_test"},
+        },
+        {
             "file": "single_source_results*.csv", "protocol": "single_source",
             "key": ["source", "target", "method", "seed", "backbone", "image_size"],
             "experiment_id": single_source_id,
@@ -233,7 +271,12 @@ def audit_tables(audit: Audit, outputs, registry, *, quick: bool) -> None:
     from src.evaluation.calibration import expected_calibration_error
     from src.evaluation.metrics import compute_all_metrics
 
-    indexed = registry.set_index("experiment_id")
+    # The registry is an append-only log, so a re-run leaves two rows under one
+    # experiment_id. Resolve to the current state before indexing; without this
+    # .loc returns a two-row Series and every comparison against it raises.
+    from src.utils.registry import latest_per_experiment
+
+    indexed = latest_per_experiment(registry).set_index("experiment_id")
 
     for spec in specifications():
         # A glob, because run_lodo.py scopes its table by resolution:
@@ -417,7 +460,12 @@ def main() -> int:
     registry = pd.read_csv(registry_path)
     registry = registry[registry["status"] == "COMPLETE"]
     registry["backbone"] = registry["backbone"].map(_registry_backbone)
-    print(f"auditing {len(registry)} completed runs against their summary tables"
+    # Distinct experiments, not log rows: a re-run under an unchanged id leaves
+    # a superseded entry behind, and counting those would overstate the work.
+    _distinct = registry["experiment_id"].nunique()
+    _superseded = len(registry) - _distinct
+    print(f"auditing {_distinct} completed runs against their summary tables"
+          + (f" ({_superseded} superseded entries skipped)" if _superseded else "")
           + (" (quick: predictions not re-scored)" if quick else ""))
 
     audit = Audit()

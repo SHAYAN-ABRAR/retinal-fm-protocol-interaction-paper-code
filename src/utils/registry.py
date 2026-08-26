@@ -31,7 +31,8 @@ from .logging import get_logger
 
 log = get_logger("utils.registry")
 
-__all__ = ["make_experiment_id", "register_experiment", "load_registry", "REGISTRY_COLUMNS"]
+__all__ = ["make_experiment_id", "register_experiment", "load_registry",
+    "latest_per_experiment", "REGISTRY_COLUMNS"]
 
 REGISTRY_COLUMNS = [
     "experiment_id", "timestamp_utc", "status",
@@ -129,6 +130,24 @@ def load_registry(registry_path: Path | str) -> Any:
     if not registry_path.exists():
         return pd.DataFrame(columns=REGISTRY_COLUMNS)
     return pd.read_csv(registry_path)
+
+
+def latest_per_experiment(registry: Any) -> Any:
+    """Collapse the append-only registry to one current row per experiment.
+
+    ``register_experiment`` appends: a re-run of an existing experiment_id adds
+    a second entry rather than replacing the first, which is deliberate -- the
+    file is a log, and a result is never overwritten in place. Readers that want
+    *the current state* rather than *the history* must therefore resolve
+    duplicates, and the resolution is last-write-wins in file order.
+
+    This existed as an unstated assumption until the RETFound probe became the
+    first experiment in the project to be re-run under an unchanged id. Anything
+    doing ``set_index("experiment_id")`` on the raw frame had been correct only
+    because no duplicate had ever occurred; with one present, ``.loc[id]``
+    silently returns a Series of two rows instead of one.
+    """
+    return registry.drop_duplicates("experiment_id", keep="last")
 
 
 # The value a key column had before it was recorded. Adding a column here is

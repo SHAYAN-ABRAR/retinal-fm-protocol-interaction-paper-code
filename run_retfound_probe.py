@@ -51,8 +51,8 @@ sys.path.insert(0, ".")
 BACKBONE = "retfound_cfp"
 IMAGE_SIZE = 224
 BATCH_SIZE = 256          # features only; the backbone is not in the graph
-EPOCHS = 30
-LEARNING_RATE = 1e-3
+EPOCHS = 200
+LEARNING_RATE = 5e-3
 ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 # EyePACS is absent deliberately -- see the module docstring.
 DEFAULT_TARGETS = ["ddr", "aptos", "idrid"]
@@ -169,9 +169,27 @@ def run_one(target: str, seed: int) -> dict | None:
     print(f"\n{'=' * 78}\n=== {experiment_id}\n    {experiment.sizes()}\n{'=' * 78}",
           flush=True)
 
+    # Per-dimension standardisation, fitted on the SOURCE TRAINING split only.
+    #
+    # This is not cosmetic. The probe originally fed raw features through an
+    # nn.LayerNorm, which normalises each sample across its 1024 dimensions and
+    # therefore discards the relative scale between dimensions that a linear
+    # head depends on. Measured on the DDR target, that alone cost 0.37 QWK
+    # (0.064 with LayerNorm against 0.437 standardised), and the head never
+    # predicted grades 1 or 3 at all. The published number would have described
+    # the normalisation, not RETFound.
+    #
+    # The statistics come from the training split and are applied unchanged to
+    # validation and target test. Fitting them on anything that includes the
+    # target would leak the target's feature distribution into the model.
+    train_indices = np.array([lookup[i] for i in experiment.train["image_id"]],
+                             dtype=np.int64)
+    mean = features[train_indices].mean(axis=0, keepdims=True)
+    std = features[train_indices].std(axis=0, keepdims=True) + 1e-6
+
     def subset(frame):
         indices = np.array([lookup[i] for i in frame["image_id"]], dtype=np.int64)
-        return _FeatureDataset(features[indices], frame)
+        return _FeatureDataset((features[indices] - mean) / std, frame)
 
     loaders = {
         name: DataLoader(subset(frame), batch_size=BATCH_SIZE,
@@ -185,11 +203,13 @@ def run_one(target: str, seed: int) -> dict | None:
 
         def __init__(self, dim: int, num_classes: int = 5) -> None:
             super().__init__()
-            self.norm = nn.LayerNorm(dim)
+            # No LayerNorm: the features arrive already standardised per
+            # dimension using training-split statistics (see subset() above).
+            # A per-sample normalisation on top of that would undo it.
             self.classifier = nn.Linear(dim, num_classes)
 
         def forward_features(self, x):
-            return self.norm(x)
+            return x
 
         def forward(self, x, return_features: bool = False):
             pooled = self.forward_features(x)
@@ -200,7 +220,15 @@ def run_one(target: str, seed: int) -> dict | None:
     train_config = TrainConfig(
         epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE,
         weight_decay=1e-4, warmup_epochs=1, scheduler="cosine", amp=False,
-        grad_clip_norm=1.0, early_stopping_patience=8, monitor="qwk", seed=seed,
+        # Patience scales with the 200-epoch schedule. At the original 8 the
+        # run stopped around epoch 21, well short of the linear optimum: the
+        # probe was reporting how far AdamW had got, not what the features
+        # support. 200 epochs at lr 5e-3 reaches source-validation QWK 0.588
+        # against the exact L-BFGS optimum's 0.596 on the DDR target.
+        #
+        # That setting was chosen by convergence on SOURCE validation against
+        # the L-BFGS reference. No target-test number took part in the choice.
+        grad_clip_norm=1.0, early_stopping_patience=50, monitor="qwk", seed=seed,
     )
     trainer = Trainer(
         model, nn.CrossEntropyLoss(), train_config, device="cuda",

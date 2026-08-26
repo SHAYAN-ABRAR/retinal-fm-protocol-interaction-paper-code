@@ -160,3 +160,29 @@ def test_a_balanced_run_still_does_not_overwrite_a_blank_natural_row() -> None:
         _balanced_row(float("nan"), 0.4077), _balanced_row(True, 0.4371), BALANCED_KEY)
     assert len(merged) == 2, "the balanced run overwrote the natural result"
     assert sorted(round(v, 4) for v in merged["qwk"]) == [0.4077, 0.4371]
+
+
+# The registry is a log, not a table
+# ------------------------------------------------------------------
+# register_experiment appends -- a re-run under an unchanged experiment_id adds
+# a second entry rather than replacing the first, and that is deliberate. Any
+# reader wanting the current state has to resolve duplicates last-write-wins.
+# The audit indexed the raw frame by experiment_id, which was correct only
+# while no experiment had ever been re-run.
+
+def test_latest_per_experiment_resolves_a_rerun() -> None:
+    from src.utils.registry import latest_per_experiment
+
+    log = pd.DataFrame([
+        {"experiment_id": "a", "test_qwk": 0.0937, "epochs_run": 27},
+        {"experiment_id": "b", "test_qwk": 0.4147, "epochs_run": 20},
+        {"experiment_id": "a", "test_qwk": 0.5076, "epochs_run": 112},
+    ])
+    current = latest_per_experiment(log)
+    assert len(current) == 2
+    assert current.set_index("experiment_id").loc["a", "test_qwk"] == pytest.approx(0.5076)
+    # Indexing the raw log is what used to break: .loc returned a two-row
+    # Series, and pd.isna() on it raised "truth value is ambiguous".
+    assert current.set_index("experiment_id").loc["a", "epochs_run"].ndim == 0
+    with pytest.raises(ValueError, match="ambiguous"):
+        bool(pd.isna(log.set_index("experiment_id").loc["a", "epochs_run"]))
