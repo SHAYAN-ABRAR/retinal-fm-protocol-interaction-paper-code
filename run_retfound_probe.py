@@ -39,6 +39,10 @@ Usage:
     python run_retfound_probe.py --extract          # one frozen pass, ~15 min
     python run_retfound_probe.py                    # probes: ddr, aptos, idrid
     python run_retfound_probe.py --targets ddr --seeds 42
+
+    # the matched ImageNet control, same pipeline, only the features differ
+    python run_retfound_probe.py --backbone densenet121 --extract
+    python run_retfound_probe.py --backbone densenet121
 """
 
 from __future__ import annotations
@@ -48,6 +52,9 @@ import time
 
 sys.path.insert(0, ".")
 
+# The backbone is module-level state because run_one() and extract_features()
+# both need it and the whole point of this script is that everything except the
+# feature extractor is identical between them. Set once by main().
 BACKBONE = "retfound_cfp"
 IMAGE_SIZE = 224
 BATCH_SIZE = 256          # features only; the backbone is not in the graph
@@ -58,6 +65,26 @@ ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 DEFAULT_TARGETS = ["ddr", "aptos", "idrid"]
 SEEDS = [42, 1, 2]
 FEATURE_FILE = "retfound_cfp_features_224.npz"
+
+
+def _use_backbone(name: str) -> None:
+    """Point the script at a backbone, features file included.
+
+    ``densenet121`` is the matched ImageNet control for the RETFound probe. It
+    is the same 1024-dimensional feature width, run through the same
+    standardisation, the same head, the same schedule and the same splits, so
+    the only thing that differs between the two sets of numbers is what
+    produced the features. Without it a RETFound probe can only be compared
+    against a fine-tuned network, which confounds the backbone with the
+    training protocol and cannot support a claim either way.
+    """
+    global BACKBONE, FEATURE_FILE
+    BACKBONE = name
+    FEATURE_FILE = f"{name}_features_{IMAGE_SIZE}.npz"
+
+
+def _is_retfound() -> bool:
+    return BACKBONE.startswith("retfound")
 
 
 def extract_features(checkpoint: str | None = None) -> None:
@@ -79,13 +106,15 @@ def extract_features(checkpoint: str | None = None) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     manifest = load_manifest(outputs / "reports" / f"manifest_cached_{IMAGE_SIZE}.csv")
-    print(f"extracting RETFound features for {len(manifest):,} images", flush=True)
+    print(f"extracting {BACKBONE} features for {len(manifest):,} images", flush=True)
 
     config = BackboneConfig(name=BACKBONE, image_size=IMAGE_SIZE, pretrained=True)
-    if checkpoint:
+    if checkpoint and _is_retfound():
         config.extra["checkpoint"] = checkpoint
     model = build_model(config).to("cuda").eval()
-    report = config.extra.get("retfound", {})
+    # Only the RETFound loader writes a report; for a timm backbone the
+    # provenance is "timm ImageNet weights" and there is nothing to verify.
+    report = config.extra.get("retfound", {"weights": f"timm imagenet ({BACKBONE})"})
     print(f"weights: {report}", flush=True)
 
     transform = build_eval_transform(AugmentationConfig(image_size=IMAGE_SIZE))
@@ -149,7 +178,12 @@ def run_one(target: str, seed: int) -> dict | None:
     from src.utils.registry import make_experiment_id, register_experiment
     from src.utils.seed import set_global_seed
 
-    assert_target_not_pretrained(target)
+    # The pretraining-overlap guard describes RETFound's corpus, not ImageNet's.
+    # Applying it to the DenseNet control would refuse EyePACS for a model that
+    # never saw it; skipping it for RETFound would report leakage as
+    # generalization. So it is asked exactly when it applies.
+    if _is_retfound():
+        assert_target_not_pretrained(target)
     set_global_seed(seed)
     root = project_root()
     outputs = root / "outputs"
@@ -185,7 +219,12 @@ def run_one(target: str, seed: int) -> dict | None:
     train_indices = np.array([lookup[i] for i in experiment.train["image_id"]],
                              dtype=np.int64)
     mean = features[train_indices].mean(axis=0, keepdims=True)
-    std = features[train_indices].std(axis=0, keepdims=True) + 1e-6
+    std = features[train_indices].std(axis=0, keepdims=True)
+    # A dimension that never varies in training carries no information, but
+    # dividing by ~0 would amplify it a millionfold if it happens to fire on the
+    # target -- turning a dead unit into the loudest input the head sees.
+    # DenseNet121 has 3 such dimensions of 1024. Pass them through unscaled.
+    std = np.where(std < 1e-6, 1.0, std)
 
     def subset(frame):
         indices = np.array([lookup[i] for i in frame["image_id"]], dtype=np.int64)
@@ -255,7 +294,7 @@ def run_one(target: str, seed: int) -> dict | None:
     write_json(outputs / "reports" / f"{experiment_id}_evaluation.json", {
         "experiment_id": experiment_id,
         "method": {"method": "linprobe", "backbone": BACKBONE, "frozen": True},
-        "component_statistics": {"retfound": str(stored["report"])},
+        "component_statistics": {"features": str(stored["report"])},
         "temperature": evaluation["temperature"],
         "results": {k: {"metrics": v.metrics, "calibration": v.calibration,
                         "calibration_scaled": v.calibration_scaled}
@@ -281,7 +320,11 @@ def run_one(target: str, seed: int) -> dict | None:
         "train_seconds": seconds,
         "predictions_path": target_result.predictions_path,
         "notes": ("RETFound frozen linear probe. EyePACS is in RETFound's "
-                  "pretraining corpus and is excluded as a target."),
+                  "pretraining corpus and is excluded as a target."
+                  if _is_retfound() else
+                  f"{BACKBONE} ImageNet frozen linear probe: the matched "
+                  "control for the RETFound probe. Identical standardisation, "
+                  "head, schedule and splits; only the features differ."),
     })
 
     return {
@@ -318,6 +361,8 @@ def main() -> None:
             return value
         return default
 
+    # Must come first: it sets the features filename every later line reads.
+    _use_backbone(_take("--backbone", BACKBONE))
     checkpoint = _take("--checkpoint", "") or None
     targets = _take("--targets", ",".join(DEFAULT_TARGETS)).split(",")
     seeds = [int(s) for s in _take("--seeds", ",".join(map(str, SEEDS))).split(",")]
@@ -332,7 +377,9 @@ def main() -> None:
             f"no features at outputs/features/{FEATURE_FILE}.\n"
             "Run:  python run_retfound_probe.py --extract")
 
-    path = outputs / "tables" / "retfound_probe_results.csv"
+    # Named for the protocol, not the backbone: the table holds RETFound and
+    # its matched ImageNet control, keyed by backbone.
+    path = outputs / "tables" / "linear_probe_results.csv"
     rows = []
     for seed in seeds:
         for target in targets:

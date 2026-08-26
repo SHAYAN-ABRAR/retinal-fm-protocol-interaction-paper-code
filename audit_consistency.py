@@ -162,7 +162,7 @@ def specifications():
         into that table would put a linear probe and a fine-tuned network in the
         same seed mean, which is how a Phase 5 summary would quietly acquire a
         row that answers a different question. They are summarised in
-        retfound_probe_results.csv and audited against it below.
+        linear_probe_results.csv and audited against it below.
         """
         return str(registry_row["method"]) == "linprobe"
 
@@ -200,7 +200,7 @@ def specifications():
             # stage_c_*.csv and audited there.
             #
             # Frozen-feature linear probes are excluded for the same reason and
-            # audited against retfound_probe_results.csv instead.
+            # audited against linear_probe_results.csv instead.
             "scope": lambda r: (n_sources(r) == 3 and not is_subsample(r)
                                 and not is_linear_probe(r)),
             "key": ["target", "method", "seed", "backbone", "image_size",
@@ -241,7 +241,7 @@ def specifications():
             # Frozen-feature linear probes, excluded from the LODO scope above.
             # Auditing them somewhere is the point: silencing the orphan report
             # without checking them would leave nine experiments unverified.
-            "file": "retfound_probe_results*.csv", "protocol": "lodo",
+            "file": "linear_probe_results*.csv", "protocol": "lodo",
             "scope": is_linear_probe,
             "key": ["target", "method", "seed", "backbone", "image_size"],
             "experiment_id": probe_id,
