@@ -189,6 +189,40 @@ class CheckpointManager:
     def best_loss_path(self) -> Path:
         return self.directory / "best_loss.pt"
 
+    def restore_best_state(self) -> bool:
+        """Re-learn what "best" means from the checkpoints already on disk.
+
+        Without this, a resumed run restarts with ``best_value = -inf``, so the
+        first epoch after the resume always compares as an improvement and
+        overwrites ``best_<monitor>.pt`` -- with a model that may be worse than
+        the one it replaces. The run then reports metrics from a checkpoint that
+        was never actually the best, and the early-stopping counter restarts as
+        well, so it also trains longer than it should.
+
+        This is not hypothetical: on 2026-08-26 a MixStyle run resumed at epoch
+        9 and immediately logged "new best val qwk: 0.6912 (was -inf)" when
+        epoch 8 had reached 0.7113.
+
+        The value is read back from the checkpoint's own recorded metrics rather
+        than tracked in a side file, so it stays correct even if the process
+        that wrote it is long gone.
+        """
+        restored = False
+        if self.best_path.exists():
+            payload = torch.load(self.best_path, map_location="cpu", weights_only=False)
+            value = (payload.get("metrics") or {}).get(self.monitor)
+            if value is not None and value == value:   # not NaN
+                self.best_value = float(value)
+                self.best_epoch = int(payload.get("epoch", -1))
+                restored = True
+        if self.best_loss_path.exists():
+            payload = torch.load(self.best_loss_path, map_location="cpu", weights_only=False)
+            loss = (payload.get("metrics") or {}).get("loss")
+            if loss is not None and loss == loss:
+                self.best_loss = float(loss)
+                self.best_loss_epoch = int(payload.get("epoch", -1))
+        return restored
+
     def _is_better(self, value: float) -> bool:
         if value != value:            # NaN never wins
             return False

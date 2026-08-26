@@ -333,6 +333,13 @@ class Trainer:
         )
         self.start_epoch = int(payload.get("epoch", -1)) + 1
         self.global_step = int(payload.get("global_step", 0))
+        # Restore what "best" meant before the interruption, or the first epoch
+        # after the resume overwrites the best checkpoint with a worse model and
+        # the early-stopping counter starts again from zero.
+        if self.checkpoints.restore_best_state():
+            log.info("restored best val %s: %.4f at epoch %d",
+                     self.checkpoints.monitor, self.checkpoints.best_value,
+                     self.checkpoints.best_epoch)
         log.info("resuming %s at epoch %d", self.experiment_id, self.start_epoch)
         return True
 

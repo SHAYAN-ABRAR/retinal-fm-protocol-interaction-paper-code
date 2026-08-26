@@ -353,6 +353,39 @@ def main() -> None:
                       flush=True)
                 traceback.print_exc()
 
+                # A crashed run used to leave nothing behind at all, so the
+                # configuration was simply absent from the registry and read as
+                # "never attempted". That is the one thing this project must not
+                # do: IRMv1 diverged to NaN on all three DDR seeds, which is a
+                # result about IRM, and silence would have hidden it.
+                #
+                # status is not COMPLETE, so audit_consistency and every
+                # analyse_* script skip these rows; they exist to record that
+                # the run happened and what it did.
+                from src.utils.registry import (
+                    make_experiment_id, register_experiment)
+
+                diverged = "nan" in str(exc).lower() or "infin" in str(exc).lower()
+                register_experiment(
+                    project_root() / "outputs" / "experiment_registry.csv",
+                    {
+                        "experiment_id": make_experiment_id(
+                            protocol="lodo",
+                            sources=[d for d in ALL_DOMAINS if d != target],
+                            target=target, backbone=BACKBONE,
+                            method=_method_tag(method), seed=seed,
+                        ),
+                        "status": "DIVERGED" if diverged else "FAILED",
+                        "protocol": "lodo",
+                        "source_domains": [d for d in ALL_DOMAINS if d != target],
+                        "target_domain": target, "backbone": BACKBONE,
+                        "method": method, "image_size": IMAGE_SIZE,
+                        "batch_size": BATCH_SIZE, "seed": seed,
+                        "domain_balanced": DOMAIN_BALANCED,
+                        "notes": f"{type(exc).__name__}: {exc}",
+                    },
+                )
+
     if rows:
         # Read back rather than re-saving: every row is already on disk, and
         # merge_results_table would reject an empty frame for lacking the key
