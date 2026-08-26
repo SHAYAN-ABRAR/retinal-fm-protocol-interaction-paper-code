@@ -71,6 +71,19 @@ SUPPORTED_BACKBONES: dict[str, dict[str, Any]] = {
         "patch_multiple": 14,
         "notes": "self-supervised ViT-S/14; freeze most blocks initially",
     },
+    "vit_large_mae_in1k": {
+        "timm_name": "vit_large_patch16_224.mae",
+        "patch_multiple": 16,
+        # The control that makes the RETFound comparison mean anything. This is
+        # the checkpoint RETFound was initialised from -- its own args record
+        # resume='./mae_pretrain_vit_large_full.pth' -- so RETFound is exactly
+        # this model plus 801 further MAE epochs on 1.6 M retinal images.
+        # Same architecture, same scale, same objective, same lineage: the only
+        # variable left is the pretraining corpus. Comparing RETFound against
+        # DenseNet121 instead confounds corpus with architecture and scale.
+        "notes": ("ImageNet MAE ViT-L/16 (He 2022); RETFound's initialisation, "
+                  "and the matched control for it"),
+    },
     "retfound_cfp": {
         "timm_name": "vit_large_patch16_224",
         "patch_multiple": 16,

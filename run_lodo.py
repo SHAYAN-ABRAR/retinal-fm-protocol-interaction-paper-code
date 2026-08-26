@@ -43,6 +43,10 @@ DOMAIN_BALANCED = False
 ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 
 
+# Set by --irm-anneal-iters. None means the published default (500).
+IRM_ANNEAL_ITERS: int | None = None
+
+
 def _method_tag(method_name: str) -> str:
     """The method component of the experiment id.
 
@@ -54,6 +58,11 @@ def _method_tag(method_name: str) -> str:
     tag = f"{method_name}-b{BATCH_SIZE}"
     if IMAGE_SIZE != 224:
         tag += f"-r{IMAGE_SIZE}"
+    # A non-default anneal is a different configuration, not a re-run of the
+    # same one: it must not share an id with the run that used the published
+    # default, or one would overwrite the other's checkpoint and predictions.
+    if method_name == "irm" and IRM_ANNEAL_ITERS is not None:
+        tag += f"-a{IRM_ANNEAL_ITERS}"
     if DOMAIN_BALANCED:
         # Without this a domain-balanced run and an ordinary one share an id and
         # the second silently destroys the first's checkpoint and predictions --
@@ -121,6 +130,8 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         experiment.train["grade"].value_counts().reindex(range(5), fill_value=0).tolist()
     )
     method = MethodConfig(name=method_name)
+    if IRM_ANNEAL_ITERS is not None:
+        method.irm_anneal_iters = IRM_ANNEAL_ITERS
     built = build_method(method, backbone, class_counts=class_counts, device="cuda")
     total, trainable = count_parameters(built.model)
 
@@ -271,6 +282,9 @@ def main() -> None:
         return default
 
     method = _take("--method", "erm")
+    global IRM_ANNEAL_ITERS
+    _anneal = _take("--irm-anneal-iters", "")
+    IRM_ANNEAL_ITERS = int(_anneal) if _anneal else None
     seeds = [int(s) for s in _take("--seeds", "42").split(",")]
     targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
 
