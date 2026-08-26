@@ -45,6 +45,10 @@ ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 
 # Set by --irm-anneal-iters. None means the published default (500).
 IRM_ANNEAL_ITERS: int | None = None
+# Set by --trainable-blocks. None means the whole backbone trains.
+TRAINABLE_BLOCKS: int | None = None
+# Set by --learning-rate. A 304 M ViT-L is not fine-tuned at a 7 M CNN's rate.
+LEARNING_RATE: float = 3e-4
 
 
 def _method_tag(method_name: str) -> str:
@@ -63,6 +67,13 @@ def _method_tag(method_name: str) -> str:
     # default, or one would overwrite the other's checkpoint and predictions.
     if method_name == "irm" and IRM_ANNEAL_ITERS is not None:
         tag += f"-a{IRM_ANNEAL_ITERS}"
+    # Partial fine-tuning and a non-default learning rate are different
+    # configurations, not re-runs, and must not share an id with the full-network
+    # run at 3e-4 -- one would overwrite the other's checkpoint and predictions.
+    if TRAINABLE_BLOCKS is not None:
+        tag += f"-tb{TRAINABLE_BLOCKS}"
+    if LEARNING_RATE != 3e-4:
+        tag += f"-lr{LEARNING_RATE:g}"
     if DOMAIN_BALANCED:
         # Without this a domain-balanced run and an ordinary one share an id and
         # the second silently destroys the first's checkpoint and predictions --
@@ -125,7 +136,20 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         expected_size=IMAGE_SIZE,
     )
 
-    backbone = BackboneConfig(name=BACKBONE, image_size=resolve_input_size(BACKBONE, IMAGE_SIZE))
+    # The probe script guards this; run_lodo did not. RETFound's CFP model was
+    # pretrained on EyePACS, so an EyePACS target would report leakage as
+    # generalization -- and nothing in the results row would show it. Raises
+    # rather than warns, for the same reason it does there.
+    if BACKBONE.startswith("retfound"):
+        from src.models.retfound import assert_target_not_pretrained
+
+        assert_target_not_pretrained(target)
+
+    backbone = BackboneConfig(
+        name=BACKBONE,
+        image_size=resolve_input_size(BACKBONE, IMAGE_SIZE),
+        trainable_blocks=TRAINABLE_BLOCKS,
+    )
     class_counts = (
         experiment.train["grade"].value_counts().reindex(range(5), fill_value=0).tolist()
     )
@@ -136,7 +160,8 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
     total, trainable = count_parameters(built.model)
 
     train_config = TrainConfig(
-        epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=3e-4, weight_decay=1e-4,
+        epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE,
+        weight_decay=1e-4,
         warmup_epochs=1, scheduler="cosine", amp=True, grad_clip_norm=1.0,
         early_stopping_patience=6, monitor="qwk", seed=seed,
     )
@@ -204,7 +229,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "domain_balanced": DOMAIN_BALANCED,
         "irm_anneal_iters": method.irm_anneal_iters,
         "accumulation_steps": 1, "effective_batch_size": BATCH_SIZE,
-        "learning_rate": 3e-4, "weight_decay": 1e-4,
+        "learning_rate": LEARNING_RATE, "weight_decay": 1e-4,
         "epochs_planned": EPOCHS, "epochs_run": len(history), "seed": seed,
         "deterministic": False,
         "n_train": len(experiment.train), "n_val": len(experiment.val),
@@ -291,6 +316,10 @@ def main() -> None:
     global IRM_ANNEAL_ITERS
     _anneal = _take("--irm-anneal-iters", "")
     IRM_ANNEAL_ITERS = int(_anneal) if _anneal else None
+    global TRAINABLE_BLOCKS, LEARNING_RATE
+    _blocks = _take("--trainable-blocks", "")
+    TRAINABLE_BLOCKS = int(_blocks) if _blocks else None
+    LEARNING_RATE = float(_take("--learning-rate", str(LEARNING_RATE)))
     seeds = [int(s) for s in _take("--seeds", "42").split(",")]
     targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
 
