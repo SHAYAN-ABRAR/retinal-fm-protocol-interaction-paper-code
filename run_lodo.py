@@ -202,6 +202,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "imbalance_strategy": method.imbalance_strategy,
         "image_size": IMAGE_SIZE, "batch_size": BATCH_SIZE,
         "domain_balanced": DOMAIN_BALANCED,
+        "irm_anneal_iters": method.irm_anneal_iters,
         "accumulation_steps": 1, "effective_batch_size": BATCH_SIZE,
         "learning_rate": 3e-4, "weight_decay": 1e-4,
         "epochs_planned": EPOCHS, "epochs_run": len(history), "seed": seed,
@@ -238,6 +239,11 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "target": target, "method": method_name, "seed": seed,
         "image_size": IMAGE_SIZE, "backbone": BACKBONE, "batch_size": BATCH_SIZE,
         "domain_balanced": DOMAIN_BALANCED,
+        # The row's "method" column holds "irm", not the experiment tag, so a
+        # non-default anneal is invisible here without this -- and the audit,
+        # which rebuilds the experiment id from these columns, would look for
+        # irm-b32 and find only the diverged run under that id.
+        "irm_anneal_iters": method.irm_anneal_iters,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
         "target_qwk": target_result.metrics["qwk"],
@@ -337,8 +343,11 @@ def main() -> None:
                 # are indistinguishable by the other four fields and the second
                 # would overwrite the first -- destroying the control it exists
                 # to be compared against.
+                # irm_anneal_iters joins the key for the same reason: two IRM
+                # runs differing only in the anneal are one row otherwise, and
+                # the second silently replaces the first.
                 ["target", "method", "seed", "backbone", "image_size",
-                 "domain_balanced"],
+                 "domain_balanced", "irm_anneal_iters"],
             )
             frame = frame.sort_values(
                 ["backbone", "seed", "target"]).reset_index(drop=True)

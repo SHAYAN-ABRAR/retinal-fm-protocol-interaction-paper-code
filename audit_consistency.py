@@ -46,7 +46,7 @@ TOLERANCE = 1e-6
 # written. A row lacking them predates any run at another setting, so it is
 # backfilled to the project default rather than reported as a fault.
 DEFAULTS = {"backbone": "densenet121", "image_size": 224, "batch_size": 32,
-            "domain_balanced": False}
+            "domain_balanced": False, "irm_anneal_iters": 500}
 
 
 class Audit:
@@ -135,6 +135,12 @@ def specifications():
         # wrong run or reports both as orphans.
         if bool(row.get("domain_balanced", False)):
             tag += "-dbal"
+        # Mirrors run_lodo._method_tag. A non-default IRM anneal is a separate
+        # configuration with its own id; without this the audit rebuilds
+        # irm-b32 for an irm-b32-a1170 row and reports it as unregistered.
+        anneal = row.get("irm_anneal_iters", 500)
+        if row["method"] == "irm" and anneal == anneal and int(anneal) != 500:
+            tag += f"-a{int(anneal)}"
         return tag
 
     def n_sources(registry_row) -> int:
@@ -204,7 +210,7 @@ def specifications():
             "scope": lambda r: (n_sources(r) == 3 and not is_subsample(r)
                                 and not is_linear_probe(r)),
             "key": ["target", "method", "seed", "backbone", "image_size",
-                    "domain_balanced"],
+                    "domain_balanced", "irm_anneal_iters"],
             "experiment_id": lodo_id,
             "target_of": lambda row: row["target"],
             # table column -> registry column

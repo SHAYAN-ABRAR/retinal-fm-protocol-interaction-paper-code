@@ -71,6 +71,12 @@ def main() -> None:
         return default
 
     n_bootstrap = int(_take("--n-bootstrap", str(N_BOOTSTRAP)))
+    # The control is selectable because there are two worth running. densenet121
+    # asks "do RETFound's features beat a small ImageNet CNN's"; vit_large_mae_in1k
+    # asks the sharper question -- same architecture, same scale, same MAE
+    # objective, same lineage, so the retinal corpus is the only variable.
+    global CONTROL
+    CONTROL = _take("--control", CONTROL)
     outputs = project_root() / "outputs"
     qwk = METRIC_FUNCTIONS["qwk"]
     severe = METRIC_FUNCTIONS["severe_error_rate"]
@@ -90,8 +96,8 @@ def main() -> None:
         return rows.set_index("seed")[column]
 
     print("=" * 118)
-    print("FROZEN LINEAR PROBE: RETFound (retinal, 304 M) vs DenseNet121 "
-          "(ImageNet, 7 M) -- identical pipeline, features only differ")
+    print(f"FROZEN LINEAR PROBE: {REFERENCE} vs {CONTROL} "
+          "-- identical pipeline, features only differ")
     print("=" * 118)
     print("  delta = control - reference, per seed, then averaged. Positive "
           "means ImageNet features won.")
@@ -128,6 +134,7 @@ def main() -> None:
 
         records.append({
             "target": target, "n_seeds": len(seeds),
+            "control": CONTROL,
             "retfound_source": float(ref_s[seeds].mean()),
             "control_source": float(con_s[seeds].mean()),
             "retfound_target": float(ref_t[seeds].mean()),
@@ -173,7 +180,7 @@ def main() -> None:
     print(f"Clearing both bars: "
           f"{', '.join(established.target) if len(established) else 'none'}.")
 
-    destination = outputs / "tables" / "linear_probe_comparison.csv"
+    destination = outputs / "tables" / f"linear_probe_comparison_{CONTROL}.csv"
     frame.to_csv(destination, index=False)
     print(f"\nsaved -> {destination}")
 

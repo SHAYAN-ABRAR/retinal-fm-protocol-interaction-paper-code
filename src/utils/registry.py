@@ -155,6 +155,8 @@ def latest_per_experiment(registry: Any) -> Any:
 KEY_COLUMN_DEFAULTS: dict[str, object] = {
     "image_size": 224,
     "domain_balanced": False,
+    # Every run before --irm-anneal-iters existed used IRMv1's published 500.
+    "irm_anneal_iters": 500,
 }
 
 
