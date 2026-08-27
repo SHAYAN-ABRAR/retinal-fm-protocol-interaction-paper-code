@@ -46,7 +46,8 @@ TOLERANCE = 1e-6
 # written. A row lacking them predates any run at another setting, so it is
 # backfilled to the project default rather than reported as a fault.
 DEFAULTS = {"backbone": "densenet121", "image_size": 224, "batch_size": 32,
-            "domain_balanced": False, "irm_anneal_iters": 500}
+            "domain_balanced": False, "irm_anneal_iters": 500,
+            "trainable_blocks": -1, "learning_rate": 3e-4}
 
 
 class Audit:
@@ -141,6 +142,15 @@ def specifications():
         anneal = row.get("irm_anneal_iters", 500)
         if row["method"] == "irm" and anneal == anneal and int(anneal) != 500:
             tag += f"-a{int(anneal)}"
+        # Partial fine-tuning and a non-default rate, mirroring run_lodo again.
+        # -1 means the whole network trained, which is what every run before the
+        # flag existed did, so it adds nothing to the tag.
+        blocks = row.get("trainable_blocks", -1)
+        if blocks == blocks and int(blocks) >= 0:
+            tag += f"-tb{int(blocks)}"
+        rate = row.get("learning_rate", 3e-4)
+        if rate == rate and float(rate) != 3e-4:
+            tag += f"-lr{float(rate):g}"
         return tag
 
     def n_sources(registry_row) -> int:
@@ -210,7 +220,8 @@ def specifications():
             "scope": lambda r: (n_sources(r) == 3 and not is_subsample(r)
                                 and not is_linear_probe(r)),
             "key": ["target", "method", "seed", "backbone", "image_size",
-                    "domain_balanced", "irm_anneal_iters"],
+                    "domain_balanced", "irm_anneal_iters", "trainable_blocks",
+                    "learning_rate"],
             "experiment_id": lodo_id,
             "target_of": lambda row: row["target"],
             # table column -> registry column

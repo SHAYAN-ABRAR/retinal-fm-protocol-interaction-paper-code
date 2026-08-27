@@ -269,6 +269,11 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         # which rebuilds the experiment id from these columns, would look for
         # irm-b32 and find only the diverged run under that id.
         "irm_anneal_iters": method.irm_anneal_iters,
+        # Same reason as irm_anneal_iters: the row's "method" column holds "erm",
+        # so partial fine-tuning and a non-default rate are invisible here, and
+        # the audit rebuilds erm-b16 for an erm-b16-tb4-lr0.0001 row.
+        "trainable_blocks": TRAINABLE_BLOCKS,
+        "learning_rate": LEARNING_RATE,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
         "target_qwk": target_result.metrics["qwk"],
@@ -376,7 +381,8 @@ def main() -> None:
                 # runs differing only in the anneal are one row otherwise, and
                 # the second silently replaces the first.
                 ["target", "method", "seed", "backbone", "image_size",
-                 "domain_balanced", "irm_anneal_iters"],
+                 "domain_balanced", "irm_anneal_iters", "trainable_blocks",
+                 "learning_rate"],
             )
             frame = frame.sort_values(
                 ["backbone", "seed", "target"]).reset_index(drop=True)

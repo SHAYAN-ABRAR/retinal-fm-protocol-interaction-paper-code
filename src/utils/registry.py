@@ -157,6 +157,10 @@ KEY_COLUMN_DEFAULTS: dict[str, object] = {
     "domain_balanced": False,
     # Every run before --irm-anneal-iters existed used IRMv1's published 500.
     "irm_anneal_iters": 500,
+    # Every run before --trainable-blocks / --learning-rate existed trained the
+    # whole network at 3e-4.
+    "trainable_blocks": -1,          # -1 encodes "all blocks"; NaN is not a key
+    "learning_rate": 3e-4,
 }
 
 
