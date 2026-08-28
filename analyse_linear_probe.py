@@ -46,7 +46,6 @@ BATCH_SIZE = 256
 IMAGE_SIZE = 224
 ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 TARGETS = ["ddr", "aptos", "idrid"]
-SEEDS = [42, 1, 2]
 ANCHOR_SEED = 42
 N_BOOTSTRAP = 5000
 
@@ -108,7 +107,10 @@ def main() -> None:
     for target in TARGETS:
         ref_t, con_t = cell(REFERENCE, target, "target_qwk"), cell(CONTROL, target, "target_qwk")
         ref_s, con_s = cell(REFERENCE, target, "source_qwk"), cell(CONTROL, target, "source_qwk")
-        seeds = [s for s in SEEDS if s in ref_t.index and s in con_t.index]
+        # Every seed present for BOTH backbones, not a hardcoded list: seeds 3
+        # and 4 were added later, and a fixed [42, 1, 2] would silently ignore
+        # them -- the results would land and nothing would read them.
+        seeds = sorted(set(ref_t.index) & set(con_t.index))
         if not seeds:
             print(f"  {target}: NOT RUN")
             continue
