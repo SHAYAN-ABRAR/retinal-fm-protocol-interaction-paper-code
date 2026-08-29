@@ -1,0 +1,327 @@
+% =====================================================================
+% DRAFT v0.1 -- IEEE JBHI submission
+%
+% STATUS: first draft. Every number in this file must be traceable to a
+% table under outputs/tables/ produced by a script in this repository.
+% Do not retype values. paper/check_numbers.py verifies the manuscript
+% against those tables; run it before every commit.
+%
+% Items still open are marked \todo{} and listed in paper/OPEN_ITEMS.md.
+% =====================================================================
+\documentclass[journal]{IEEEtran}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\begin{document}
+
+\title{How You Evaluate a Retinal Foundation Model Determines\\
+       the Answer You Get}
+
+\author{Shayan Abrar%
+\thanks{Manuscript drafted \today. Code, experiment registry and all
+generator scripts: \url{https://github.com/SHAYAN-ABRAR/Paper-Code}}}
+
+\maketitle
+
+% ---------------------------------------------------------------- abstract
+\begin{abstract}
+Domain-specific foundation models are increasingly the default starting point
+for medical imaging, and linear probing is the standard cheap protocol for
+benchmarking them. We show that for cross-domain diabetic retinopathy (DR)
+grading these two facts are in tension. We compare RETFound, a ViT-L/16 masked
+autoencoder pretrained on ${\sim}1.6$M retinal images, against
+\emph{the exact ImageNet MAE checkpoint it was initialised from}, holding
+architecture, parameter count, objective, splits and schedule constant so that
+the pretraining corpus is the only variable. As frozen feature extractors the
+general-purpose initialisation transfers better on two of three held-out
+domains ($+0.070$ and $+0.108$ QWK, $2.4\times$ and $2.0\times$ the across-seed
+standard deviation, five seeds). When both models are fine-tuned identically
+the difference disappears: no held-out domain favours the general-purpose
+initialisation, and the smallest domain favours RETFound. The cheap protocol and
+the deployed protocol therefore rank the same two models differently on the same
+data. We situate this within a broader evaluation of cross-domain DR grading on
+four public datasets under a strict leave-one-domain-out protocol
+(\num{229} training runs): no domain-generalization objective beats empirical
+risk minimisation on either target tested, whereas doubling input resolution
+improves held-out QWK by up to $0.097$ and reduces severe misgrades by
+22--48\%. Across the study, three separate effects were statistically
+significant under a paired bootstrap at three seeds and vanished at five. We
+argue that seed-level variance, not test-set sampling variance, is the binding
+uncertainty in this problem, and report every claim against both.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Diabetic retinopathy, domain generalization, foundation models, model
+evaluation, calibration, distribution shift.
+\end{IEEEkeywords}
+
+% ------------------------------------------------------------ introduction
+\section{Introduction}
+\IEEEPARstart{D}{iabetic} retinopathy screening is among the most successful
+applications of deep learning in medicine, yet reported performance is almost
+always measured on held-out images from the same source as the training data.
+Deployment means something different: running on images from a clinic, camera
+and population the model has never seen.
+
+This paper reports a study of that gap on four public DR datasets treated as
+distinct clinical domains, and arrives at a conclusion about \emph{measurement}
+rather than about any particular method.
+
+Our central observation concerns retinal foundation models. RETFound~\cite{zhou2023retfound}
+is the reference self-supervised model for colour fundus photography and is
+widely adopted as an initialisation. Its own checkpoint records that it was
+initialised from a general-purpose ImageNet MAE ViT-L/16 and trained for a
+further 801 masked-autoencoder epochs on retinal images. That makes an unusually
+clean experiment available: compare RETFound against \emph{the checkpoint it was
+built from}, with architecture, scale, objective, data splits, augmentation,
+optimiser and schedule all held fixed. The pretraining corpus is then the only
+variable.
+
+Under a frozen linear probe, the general-purpose initialisation transfers
+better on two of three held-out domains, by margins that clear both of our
+evidential bars. Under identical fine-tuning of both models, that difference
+disappears entirely. Since linear probing is the standard inexpensive way to
+benchmark a foundation model, and fine-tuning is how such models are actually
+deployed, the two protocols support opposite summaries of the same comparison.
+
+\textbf{Contributions.}
+\begin{enumerate}
+\item A matched-initialisation comparison of a domain-specific foundation model
+      against its own general-purpose starting point, at two protocol levels
+      (frozen probe and fine-tuning) on three held-out domains.
+\item Evidence that the two protocols disagree, and therefore that
+      probe-based benchmarks of medical foundation models should not be read as
+      predictive of fine-tuned behaviour.
+\item A leave-one-domain-out evaluation of four domain-generalization
+      objectives against ERM on two targets under two batch samplers, with
+      diagnostics confirming each method's machinery engaged.
+\item A quantification of what \emph{does} move cross-domain performance:
+      input resolution dominates every method and architecture change tested.
+\item A methodological result of independent interest: three effects in this
+      study were significant under a paired bootstrap at three seeds and
+      disappeared at five. We report all claims against an across-seed
+      standard deviation as well as a bootstrap interval.
+\end{enumerate}
+
+% --------------------------------------------------------------- protocol
+\section{Data and Protocol}
+
+\subsection{Datasets}
+Four public DR datasets are treated as distinct domains: DDR, APTOS~2019,
+IDRiD and EyePACS, all graded on the five-point ICDR scale.
+Table~\ref{tab:datasets} summarises them. \todo{insert
+outputs/tables/table1\_dataset\_characteristics.tex}
+
+\subsection{Leave-one-domain-out}
+Each experiment trains on three domains and evaluates on the fourth, which
+contributes \emph{test data only}. The held-out domain is excluded from
+training, validation, early stopping, model selection and temperature fitting.
+This is asserted in code rather than left to convention. Splits are
+patient-level where patient identifiers exist.
+
+\subsection{Two bars for every claim}
+\label{sec:bars}
+An effect is reported as established only if it satisfies both:
+\begin{enumerate}
+\item $|\Delta| >$ the standard deviation of the paired per-seed differences
+      (seed $s$ of one configuration differenced against seed $s$ of the
+      other); and
+\item its paired bootstrap confidence interval excludes zero.
+\end{enumerate}
+The second criterion alone is standard and, in this problem, insufficient. A
+paired bootstrap resamples \emph{images within one seed}; it correctly answers
+``did this model beat that model on this test set'', and is structurally blind
+to the fact that a different random seed produces a different model. Three
+separate effects in this study cleared the bootstrap at three seeds --- two of
+them at $p<0.001$ --- and fell below the seed-variance bar when two further
+seeds were added (Section~\ref{sec:seeds}, Fig.~\ref{fig:seeds}).
+
+% ---------------------------------------------------------------- methods
+\section{Methods}
+
+\subsection{Matched foundation-model comparison}
+RETFound's checkpoint metadata records
+\texttt{resume=mae\_pretrain\_vit\_large\_full.pth}, mask ratio $0.85$, 801
+epochs, \texttt{mae\_vit\_large\_patch16}. The named initialisation is
+available publicly, so the control is not an approximation but the model
+RETFound started from. Both are ViT-L/16 with $303.3$M parameters and identical
+feature width.
+
+\textbf{Frozen protocol.} Features are extracted once per backbone and
+standardised per dimension using statistics fitted on the source training split
+only. A linear head is trained for 200 epochs; the schedule was chosen by
+convergence against an exact L-BFGS reference \emph{on source validation}, with
+no target-test quantity involved in the choice.
+
+\textbf{Fine-tuned protocol.} The last 4 of 24 transformer blocks are unfrozen,
+which is $50.4$M of $303.3$M trainable and identical for both models. Both use
+$\mathrm{lr}=10^{-4}$, batch 16, 20 epochs with early stopping.
+
+\textbf{Leakage.} EyePACS is in RETFound's pretraining corpus and is therefore
+excluded as a held-out target throughout; using it would report leakage as
+generalization. This is enforced by a guard that raises rather than warns.
+EyePACS remains a \emph{source} domain, which is sound, since source domains are
+seen by construction. DDR, APTOS and IDRiD are not named in RETFound's
+pretraining description, but that description does not enumerate its public
+datasets; we record them as \emph{overlap not ruled out} rather than clean, and
+return to this in Section~\ref{sec:limits}.
+
+\subsection{Domain-generalization objectives}
+Deep CORAL~\cite{sun2016deepcoral}, MixStyle~\cite{zhou2021mixstyle},
+GroupDRO~\cite{sagawa2020groupdro} and IRMv1~\cite{arjovsky2019irm} are compared
+against ERM at published defaults. Because a naturally shuffled batch from these
+pools is dominated by one domain, each method is additionally run under a
+domain-balanced sampler, \emph{with an ERM control on the same sampler}, and we
+report how often each method's machinery was degenerate.
+
+% ---------------------------------------------------------------- results
+\section{Results}
+
+\subsection{The two protocols disagree}
+\label{sec:protocol}
+Table~\ref{tab:foundation} and Fig.~\ref{fig:protocol} give the comparison.
+Frozen, the general-purpose initialisation is ahead on DDR
+($+0.0702$, $2.42\times$ SD) and APTOS ($+0.1075$, $1.95\times$), both clearing
+Section~\ref{sec:bars}; IDRiD is within seed noise. Fine-tuned, no target
+favours it: DDR $+0.0217$ ($0.82\times$), APTOS $+0.0073$ ($0.42\times$), and
+IDRiD $-0.0559$ ($1.25\times$) favours RETFound.
+
+The mechanism is visible in the source--target split. Frozen, both models fit
+the source domains almost identically (within $0.017$ QWK on every target); the
+entire difference is the drop from source to target, which is $5.9\times$ larger
+for RETFound on DDR and $2.4\times$ larger on APTOS. Fine-tuned, RETFound fits
+the sources marginally better on all three targets. Whatever the frozen
+representation lacked for transfer, four unfrozen blocks recover.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{../outputs/figures/fig1_protocol_disagreement.pdf}
+\caption{The same two models, same splits, two evaluation protocols. Left:
+QWK difference (ImageNet-MAE minus RETFound) on each held-out domain; error
+bars are the across-seed standard deviation of the paired per-seed differences.
+Right: the same effects expressed as multiples of that standard deviation,
+with the bar of Section~\ref{sec:bars} marked. The frozen protocol reports a
+large advantage for the general-purpose initialisation on two domains; the
+fine-tuned protocol reports none, and reverses on the third.}
+\label{fig:protocol}
+\end{figure*}
+
+\subsection{Seed variance dominates}
+\label{sec:seeds}
+Three effects in this study were significant under a paired bootstrap and did
+not survive additional seeds (Fig.~\ref{fig:seeds}). MixStyle beat ERM by
+$+0.0194$ QWK on one seed with a bootstrap interval of $[+0.0102, +0.0286]$ and
+$p<0.001$; averaged over three seeds the difference was $+0.0061$ with the seeds
+disagreeing in sign. The fine-tuned RETFound comparison cleared the bar at
+$1.03\times$ on DDR and $1.58\times$ on APTOS with three seeds, and fell to
+$0.82\times$ and $0.42\times$ with five.
+
+In each case the bootstrap was correct about what it measures. The failure is
+one of interpretation: test-set resampling variance is not the binding
+uncertainty here, seed-level variance is.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{../outputs/figures/fig2_seed_collapse.pdf}
+\caption{Three effects that were significant under a paired bootstrap at three
+seeds and fell below the seed-variance bar at five.}
+\label{fig:seeds}
+\end{figure}
+
+\subsection{No DG objective beats ERM}
+On the EyePACS target (35{,}108 test images, five methods, two samplers, three
+seeds) no method clears both bars. The domain-balanced sampler removes the
+obvious objection: it drives degenerate batches from 62\% to 0\% for GroupDRO
+and 61\% to 0\% for IRM, and the ranking does not change. The result replicates
+on DDR. IRMv1 diverged to NaN on all DDR seeds under its published annealing
+schedule and again under a schedule matched to the split's iteration count;
+we report this as instability rather than as a method comparison.
+
+\subsection{What does move cross-domain performance}
+Fig.~\ref{fig:ranking} ranks the interventions tested. Doubling input
+resolution from 224 to 512 px is the largest effect in the study: $+0.0967$ QWK
+on EyePACS ($4.8\times$ SD) with severe misgrades down 22--48\% across targets.
+A modern architecture at comparable cost (ConvNeXt-Tiny) is second at
+$+0.0554$ ($4.1\times$). Every domain-generalization objective, and
+domain-specific pretraining under fine-tuning, are within seed noise.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{../outputs/figures/fig3_intervention_ranking.pdf}
+\caption{Best observed effect on a held-out domain for each intervention, with
+the across-seed standard deviation it must clear.}
+\label{fig:ranking}
+\end{figure}
+
+\subsection{The cost of cross-domain deployment}
+Against in-domain models evaluated on identical test images, deployment to an
+unseen domain costs $0.138$ QWK on DDR and $0.291$ on EyePACS, with severe
+misgrades rising 107\% and 155\% respectively. A subsampling study attributes
+6\% of the EyePACS gap to training-set size and 94\% to domain shift.
+
+\todo{tables: foundation comparison, DG comparison, deployment cost --- emit
+from export\_paper\_tables.py rather than transcribing}
+
+% ------------------------------------------------------------- discussion
+\section{Discussion}
+The practical reading is narrow and, we think, useful. We do not claim that
+retinal pretraining is harmful. We claim that a linear probe and a fine-tune
+rank these two models differently on the same data, that the frozen result is
+the larger and more eye-catching of the two, and that it is the one a cheap
+benchmark would report.
+
+This matters because probe-based evaluation is common precisely where compute is
+scarce, which is also where practitioners are most likely to adopt a foundation
+model on the strength of a published benchmark. Our results suggest that such a
+benchmark answers a different question from the deployment one.
+
+The broader pattern across this study is that interventions which improve
+in-domain fit do not reliably improve cross-domain transfer, and that the
+intervention which helped most --- input resolution --- is the one the
+domain-generalization literature does not study.
+
+% ------------------------------------------------------------ limitations
+\section{Limitations}
+\label{sec:limits}
+\begin{itemize}
+\item \textbf{Partial fine-tuning.} The last 4 of 24 blocks were unfrozen. Full
+      fine-tuning is affordable on the hardware used and remains untested.
+\item \textbf{IDRiD is the smallest target} (507 test images) and its
+      fine-tuned result rests on three seeds at the time of writing, which is
+      the sample size this paper argues is insufficient. \todo{update when
+      seeds 3--4 land}
+\item \textbf{Pretraining overlap is not ruled out} for DDR, APTOS and IDRiD.
+\item \textbf{One modality, one task, four datasets}, with documented label
+      quality problems in at least two.
+\item \textbf{No clinical validation.} No reader study and no deployment data.
+\item \textbf{Nulls are not equivalences.} Two fine-tuned targets are
+      non-significant, not demonstrated equal.
+\end{itemize}
+
+% ------------------------------------------------------------- conclusion
+\section{Conclusion}
+Evaluating a medical foundation model with a frozen linear probe and evaluating
+it by fine-tuning can support opposite conclusions about the same two models on
+the same data. In our matched comparison the cheap protocol favours the
+general-purpose initialisation on two of three held-out domains and the
+deployed protocol favours neither. Reported alongside a leave-one-domain-out
+study in which no domain-generalization objective beat ERM and input resolution
+beat all of them, the results suggest that measurement protocol deserves as much
+scrutiny in this area as method design.
+
+\section*{Reproducibility}
+All \num{229} runs are recorded in a machine-checked experiment registry; every
+table and figure in this paper is emitted by a script from that registry, and a
+consistency audit verifies the derived tables against it. Runs that diverged are
+recorded as such rather than omitted.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}
