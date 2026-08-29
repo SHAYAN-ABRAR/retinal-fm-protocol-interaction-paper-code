@@ -27,7 +27,8 @@ sys.path.insert(0, ".")
 
 FROZEN = "outputs/tables/linear_probe_comparison_vit_large_mae_in1k.csv"
 FINETUNE = "outputs/tables/finetune_comparison.csv"
-TARGET_LABELS = {"ddr": "DDR", "aptos": "APTOS", "idrid": "IDRiD"}
+TARGET_LABELS = {"ddr": "DDR", "aptos": "APTOS", "idrid": "IDRiD",
+                 "eyepacs": "EyePACS"}
 
 
 def _load(path):
@@ -177,6 +178,87 @@ def figure_intervention_ranking(outputs):
     print(f"  fig3 -> {paths[0].name}")
 
 
+def figure_transfer_mechanism(outputs):
+    """Why the frozen gap exists: identical source fit, different drop."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from src.visualization.style import save_figure
+
+    frozen, fine = _load(FROZEN), _load(FINETUNE)
+    if frozen is None or fine is None:
+        print("  fig4: NOT RUN (missing comparison table)")
+        return
+
+    targets = [t for t in ("ddr", "aptos", "idrid")
+               if t in set(frozen.target) & set(fine.target)]
+    x = np.arange(len(targets))
+    width = 0.36
+
+    fig, axes = plt.subplots(1, 2, figsize=(9.2, 3.5), sharey=True)
+    for ax, frame, title, dcol in (
+            (axes[0], frozen, "Frozen (linear probe)", "delta_target_qwk"),
+            (axes[1], fine, "Fine-tuned (last 4 blocks)", "delta_qwk")):
+        ref = [float(frame.loc[frame.target == t, "retfound_drop"].iloc[0]) for t in targets]
+        con = [float(frame.loc[frame.target == t, "control_drop"].iloc[0]) for t in targets]
+        ax.bar(x - width / 2, ref, width, color="#009E73", label="RETFound")
+        ax.bar(x + width / 2, con, width, color="#CC79A7", label="ImageNet-MAE")
+        ax.axhline(0, color="0.3", lw=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels([TARGET_LABELS[t] for t in targets])
+        ax.set_title(title, loc="left")
+    axes[0].set_ylabel("source QWK − target QWK\n(higher = transfers worse)")
+    axes[0].legend(frameon=False, fontsize=8)
+    fig.tight_layout()
+    paths = save_figure(fig, "fig4_transfer_mechanism", outputs, formats=("png", "pdf"))
+    print(f"  fig4 -> {paths[0].name}")
+
+
+def figure_lodo_landscape(outputs):
+    """The problem being solved: how far each held-out domain falls."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from pathlib import Path as _P
+
+    from src.visualization.style import save_figure
+
+    path = _P("outputs/tables/lodo_erm_seed_verdicts.csv")
+    if not path.exists():
+        print("  fig5: NOT RUN (lodo_erm_seed_verdicts.csv missing)")
+        return
+    frame = pd.read_csv(path)
+    order = ["aptos", "ddr", "idrid", "eyepacs"]
+    frame = frame.set_index("target").loc[[t for t in order if t in set(frame.target)]]
+    y = np.arange(len(frame))
+
+    fig, ax = plt.subplots(figsize=(7.0, 3.2))
+    ax.barh(y + 0.19, frame["in_domain_qwk"], 0.36,
+            xerr=frame["in_domain_qwk_sd"], capsize=3,
+            color="#56B4E9", label="in-domain")
+    ax.barh(y - 0.19, frame["lodo_qwk_mean"], 0.36,
+            xerr=frame["lodo_qwk_sd"], capsize=3,
+            color="#E69F00", label="leave-one-domain-out")
+    ax.set_yticks(y)
+    ax.set_yticklabels([TARGET_LABELS.get(t, t.upper()) for t in frame.index])
+    ax.set_xlabel("QWK on matched test images")
+    ax.set_title("What deployment to an unseen domain costs", loc="left")
+    # Above the axes: at "lower right" it sat on top of the APTOS bars
+    # and its own delta label.
+    ax.legend(frameon=False, fontsize=8, ncol=2,
+              loc="lower center", bbox_to_anchor=(0.5, 1.02))
+    for i, (_, r) in enumerate(frame.iterrows()):
+        established = bool(r["exceeds_seed_sd"]) and bool(r["ci_excludes_zero"])
+        mark = f"{r['delta_qwk']:+.3f}" + ("" if established else " (ns)")
+        ax.text(max(r["in_domain_qwk"], r["lodo_qwk_mean"]) + 0.02, i, mark,
+                va="center", fontsize=8,
+                color="#B00020" if established else "0.45")
+    ax.set_xlim(0, 1.08)
+    fig.tight_layout()
+    paths = save_figure(fig, "fig5_lodo_landscape", outputs, formats=("png", "pdf"))
+    print(f"  fig5 -> {paths[0].name}")
+
+
 def main() -> None:
     from src.utils.io import project_root
     from src.visualization.style import apply_style
@@ -189,6 +271,8 @@ def main() -> None:
     figure_protocol_disagreement(outputs)
     figure_seed_collapse(outputs)
     figure_intervention_ranking(outputs)
+    figure_transfer_mechanism(outputs)
+    figure_lodo_landscape(outputs)
     print("done")
 
 

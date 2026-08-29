@@ -1,0 +1,15 @@
+\begin{table}[t]
+\centering
+\caption{The cost of cross-domain deployment. An in-domain model and a leave-one-domain-out model are evaluated on the same matched test images and differenced seed-to-seed over three seeds, so the reported spread is the run-to-run variation of the difference itself rather than of either model alone. $\Delta$ is LODO minus in-domain, so a negative value is the cost of never having seen the domain. Bold marks the two entries clearing both criteria of Section~\ref{sec:bars}. IDRiD's positive value is within seed noise and must not be read as cross-domain training helping.}
+\label{tab:deployment}
+\begin{tabular}{lrrrr}
+\toprule
+Domain & In-domain QWK & LODO QWK & $\Delta$ & Paired 95\% CI \\
+\midrule
+DDR & 0.8702 $\pm$ 0.0086 & 0.7327 $\pm$ 0.0038 & $\mathbf{-0.1376}$ & $[-0.1760, -0.0954]$ \\
+APTOS 2019 & 0.9085 $\pm$ 0.0097 & 0.8625 $\pm$ 0.0103 & $-0.0460$ & $[-0.1002, +0.0035]$ \\
+IDRiD & 0.5846 $\pm$ 0.0191 & 0.6803 $\pm$ 0.0504 & $+0.0957$ & $[-0.1630, +0.3661]$ \\
+EyePACS & 0.7063 $\pm$ 0.0139 & 0.4153 $\pm$ 0.0082 & $\mathbf{-0.2910}$ & $[-0.3305, -0.2375]$ \\
+\bottomrule
+\end{tabular}
+\end{table}

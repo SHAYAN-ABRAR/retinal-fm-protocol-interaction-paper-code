@@ -224,7 +224,7 @@ Section~\ref{sec:bars}; IDRiD is within seed noise. Fine-tuned, no target
 favours it: DDR $+0.0217$ ($0.82\times$), APTOS $+0.0073$ ($0.42\times$), and
 IDRiD $-0.0559$ ($1.25\times$) favours RETFound.
 
-The mechanism is visible in the source--target split. Frozen, both models fit
+The mechanism is visible in the source--target split (Fig.~ef{fig:mechanism}). Frozen, both models fit
 the source domains almost identically (within $0.017$ QWK on every target); the
 entire difference is the drop from source to target, which is $5.9\times$ larger
 for RETFound on DDR and $2.4\times$ larger on APTOS. Fine-tuned, RETFound fits
@@ -242,6 +242,17 @@ with the bar of Section~\ref{sec:bars} marked. The frozen protocol reports a
 large advantage for the general-purpose initialisation on two domains; the
 fine-tuned protocol reports none, and reverses on the third.}
 \label{fig:protocol}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{../outputs/figures/fig4_transfer_mechanism.pdf}
+\caption{Why the frozen gap exists. Each bar is the drop from source-validation
+QWK to held-out-target QWK, so a taller bar means the representation transfers
+worse. Frozen (left), RETFound loses substantially more than the checkpoint it
+was initialised from on DDR and APTOS despite fitting the source domains
+equally well. Fine-tuned (right), the difference closes.}
+\label{fig:mechanism}
 \end{figure*}
 
 \subsection{Seed variance dominates}
@@ -293,16 +304,26 @@ the across-seed standard deviation it must clear.}
 \end{figure}
 
 \subsection{The cost of cross-domain deployment}
-Against in-domain models evaluated on identical test images, deployment to an
-unseen domain costs $0.138$ QWK on DDR and $0.291$ on EyePACS, with severe
+Table~ef{tab:deployment} and Fig.~ef{fig:landscape} give the
+comparison. Against in-domain models evaluated on identical test images,
+deployment to an unseen domain costs $0.138$ QWK on DDR and $0.291$ on EyePACS, with severe
 misgrades rising 107\% and 155\% respectively. A subsampling study attributes
 6\% of the EyePACS gap to training-set size and 94\% to domain shift.
 
 \input{../outputs/tables/table_foundation}
 \input{../outputs/tables/table_dg_methods}
 
-\todo{deployment-cost table: regenerate the 224\,px three-seed paired version;
-the existing table\_deployment\_cost.tex is the 512\,px seed-42 one}
+\input{../outputs/tables/table_deployment_cost_224}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{../outputs/figures/fig5_lodo_landscape.pdf}
+\caption{In-domain and leave-one-domain-out models on the same matched test
+images, three seeds each, paired seed-to-seed. Annotations give the paired
+difference; \emph{ns} marks the two domains where it does not clear both
+criteria of Section~\ref{sec:bars}.}
+\label{fig:landscape}
+\end{figure}
 
 % ------------------------------------------------------------- discussion
 \section{Discussion}
