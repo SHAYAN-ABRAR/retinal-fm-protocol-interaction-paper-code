@@ -16,6 +16,7 @@
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
+\usepackage{siunitx}
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
 \begin{document}
@@ -108,6 +109,37 @@ deployed, the two protocols support opposite summaries of the same comparison.
       disappeared at five. We report all claims against an across-seed
       standard deviation as well as a bootstrap interval.
 \end{enumerate}
+
+% ----------------------------------------------------------- related work
+\section{Related Work}
+
+\textbf{Domain generalization.} A large family of objectives aims to learn
+representations invariant to domain shift, including feature alignment
+\cite{sun2016deepcoral}, style augmentation \cite{zhou2021mixstyle}, group
+reweighting \cite{sagawa2020groupdro} and invariance penalties
+\cite{arjovsky2019irm}. Gulrajani and Lopez-Paz \cite{gulrajani2021domainbed}
+found that under a fair model-selection protocol none reliably outperforms
+empirical risk minimisation on standard benchmarks. Our results reproduce that
+conclusion on cross-domain DR grading and add an observation specific to
+clinical data: these methods' machinery is frequently degenerate on naturally
+imbalanced source pools, where a batch of 32 drawn from our pools contains zero
+images from the smallest domain. We address this with a domain-balanced sampler
+and an ERM control on that same sampler.
+
+\textbf{Medical foundation models.} RETFound \cite{zhou2023retfound} applies
+masked autoencoding \cite{he2022mae} to ${\sim}1.6$M retinal images and is the
+reference self-supervised initialisation for colour fundus photography.
+Evaluations of such models commonly report linear-probe performance, since
+probing is cheap and isolates representation quality from fine-tuning
+hyperparameters. Our contribution is to run both protocols on a matched pair
+--- the foundation model and the general-purpose checkpoint it was initialised
+from --- and to show that they disagree.
+
+\textbf{Evaluation under seed variance.} Reporting a single training run with a
+test-set confidence interval remains common. We find that in this problem
+seed-level variance exceeds test-set sampling variance often enough that three
+separate effects were significant under a paired bootstrap and vanished when
+two further seeds were added (Section~\ref{sec:seeds}).
 
 % --------------------------------------------------------------- protocol
 \section{Data and Protocol}
@@ -235,8 +267,9 @@ seeds and fell below the seed-variance bar at five.}
 \end{figure}
 
 \subsection{No DG objective beats ERM}
-On the EyePACS target (35{,}108 test images, five methods, two samplers, three
-seeds) no method clears both bars. The domain-balanced sampler removes the
+Table~\ref{tab:dg} gives the comparison. On the EyePACS target
+(35{,}108 test images, five methods, two samplers, three seeds) no method
+clears both bars. The domain-balanced sampler removes the
 obvious objection: it drives degenerate batches from 62\% to 0\% for GroupDRO
 and 61\% to 0\% for IRM, and the ranking does not change. The result replicates
 on DDR. IRMv1 diverged to NaN on all DDR seeds under its published annealing
@@ -265,8 +298,11 @@ unseen domain costs $0.138$ QWK on DDR and $0.291$ on EyePACS, with severe
 misgrades rising 107\% and 155\% respectively. A subsampling study attributes
 6\% of the EyePACS gap to training-set size and 94\% to domain shift.
 
-\todo{tables: foundation comparison, DG comparison, deployment cost --- emit
-from export\_paper\_tables.py rather than transcribing}
+\input{../outputs/tables/table_foundation}
+\input{../outputs/tables/table_dg_methods}
+
+\todo{deployment-cost table: regenerate the 224\,px three-seed paired version;
+the existing table\_deployment\_cost.tex is the 512\,px seed-42 one}
 
 % ------------------------------------------------------------- discussion
 \section{Discussion}
@@ -314,6 +350,13 @@ deployed protocol favours neither. Reported alongside a leave-one-domain-out
 study in which no domain-generalization objective beat ERM and input resolution
 beat all of them, the results suggest that measurement protocol deserves as much
 scrutiny in this area as method design.
+
+\section*{Data Availability and Ethics}
+All four datasets are publicly available and were used under their respective
+licences. No new patient data were collected and no identifiable information
+was processed; this is a secondary analysis of de-identified public data and
+required no additional ethical approval. \todo{confirm per-dataset licence
+statements before submission}
 
 \section*{Reproducibility}
 All \num{229} runs are recorded in a machine-checked experiment registry; every

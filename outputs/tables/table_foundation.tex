@@ -1,0 +1,16 @@
+\begin{table*}[t]
+\centering
+\caption{RETFound against the ImageNet MAE checkpoint it was initialised from, under two evaluation protocols. Architecture, parameter count, objective, splits, augmentation and schedule are identical; the pretraining corpus is the only variable. $\Delta$ is ImageNet-MAE minus RETFound, so a positive value favours the general-purpose initialisation. $\sigma$ is the standard deviation of the paired per-seed differences. Bold marks effects clearing both criteria of Section~\ref{sec:bars}; every other entry is within seed noise. The frozen protocol reports an advantage on two of three held-out domains and the fine-tuned protocol on none.}
+\label{tab:foundation}
+\begin{tabular}{lrrrrrr}
+\toprule
+& \multicolumn{3}{c}{Frozen (linear probe)} & \multicolumn{3}{c}{Fine-tuned (last 4 of 24 blocks)} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Held-out domain & seeds & $\Delta$ QWK & $|\Delta|/\sigma$ & seeds & $\Delta$ QWK & $|\Delta|/\sigma$ \\
+\midrule
+DDR & 5 & $\mathbf{+0.0702}$ & 2.42 & 5 & $+0.0217$ & 0.82 \\
+APTOS 2019 & 5 & $\mathbf{+0.1075}$ & 1.95 & 5 & $+0.0073$ & 0.42 \\
+IDRiD & 5 & $-0.0426$ & 1.24 & 3 & $\mathbf{-0.0559}$ & 1.25 \\
+\bottomrule
+\end{tabular}
+\end{table*}
