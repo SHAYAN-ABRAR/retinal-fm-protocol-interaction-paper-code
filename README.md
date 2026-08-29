@@ -1,29 +1,47 @@
 # Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
 
-> **Status: Phases 1-9 complete. 279 tests pass.**
+> **Status: Phases 1–13 complete. 328 tests, 2244 audit checks pass.**
+> **229 runs, 111 GPU-hours, 4 backbones, 3 protocols.**
 >
-> Most results below are **224 px**. The 512 px comparison is complete on the
-> LODO matrix and the in-domain ceilings, and it is the largest effect in the
-> project — see [`docs/PHASE9_RESOLUTION_REPORT.md`](docs/PHASE9_RESOLUTION_REPORT.md).
-> Data provenance and audit, label verification, manifest, deduplication,
-> patient-level splits, passing leakage audit, preprocessing, image cache,
-> training loop, metrics, calibration, bootstrap CIs, selective prediction,
-> ordinal CORAL, Deep CORAL, MixStyle, representation analysis, LaTeX tables,
-> and the experiment registry. **110 runs, 46.4 GPU-hours.**
+> Full write-ups in [`docs/`](docs/). Every number below is produced by a script
+> in this repo and verified against `outputs/experiment_registry.csv`, which is
+> the authoritative record — the summary tables are derived from it and
+> `audit_consistency.py` checks they agree.
 >
-> **Headline results, all on 3 seeds:**
-> - Calibration degrades on unseen domains even where accuracy does not
->   (held-out DDR: QWK -0.011, ECE 0.076 -> 0.130).
-> - Source-fitted temperature scaling works under mild shift and fails under
->   severe shift (corrects DDR and APTOS; fails on IDRiD and EyePACS).
-> - Cross-domain deployment costs 0.143 QWK on DDR and 0.294 on EyePACS,
->   measured against in-domain models on identical images.
-> - **No DG method beat ERM.** All five alternatives are worse on target QWK.
-> - **Multi-source training buys nothing.** One source matches three on all four
->   targets; the 3-source pools were 68-89% EyePACS.
+> **Headline results**
 >
-> **Not a paper yet:** one backbone, no hyperparameter search, no manuscript.
-> Every unrun item is marked `NOT RUN`. See [Honesty policy](#12-honesty-policy).
+> - **A linear probe and a fine-tune rank two foundation models differently.**
+>   RETFound's *frozen* features transfer worse than the ImageNet-MAE ViT-L it
+>   was built from — +0.0702 QWK on DDR (2.42× seed SD), +0.1075 on APTOS
+>   (1.95×), 5 seeds. After fine-tuning both models identically, **no target
+>   favours the ImageNet initialisation** and IDRiD favours RETFound.
+>   Phases [12](docs/PHASE12_FOUNDATION_MODEL.md) and
+>   [13](docs/PHASE13_FINETUNE.md).
+> - **No domain-generalization method beats ERM.** Deep CORAL, MixStyle,
+>   GroupDRO and IRMv1, on two LODO targets, under two samplers, with
+>   diagnostics proving the machinery engaged (0% degenerate batches under
+>   balanced sampling). Phases [10](docs/PHASE10_DG_METHOD_COMPARISON.md) and
+>   [11](docs/PHASE11_DDR_REPLICATION.md).
+> - **Input resolution beats every method and every backbone.** 224→512 px is
+>   +0.0967 QWK on EyePACS and cuts severe errors 22–48% — larger than any DG
+>   method, any architecture change, or 4× the training data.
+>   Phase [9](docs/PHASE9_RESOLUTION_REPORT.md).
+> - **Cross-domain deployment costs 0.138 QWK on DDR and 0.291 on EyePACS**,
+>   measured against in-domain models on identical images, with severe errors
+>   up 107% and 155%.
+> - **Shift, not scale.** Training-set size explains 6% of the EyePACS gap;
+>   domain shift explains 94%.
+>
+> **Two bars for every claim.** An effect counts only if it exceeds the
+> across-seed SD *and* its paired bootstrap CI excludes zero. Three separate
+> results in this project were significant by bootstrap at three seeds and
+> vanished at five — see [Phase 13 §1](docs/PHASE13_FINETUNE.md). The bootstrap
+> resamples images within one seed and structurally cannot see seed variance.
+>
+> **Not a paper yet:** no manuscript, no clinical validation, no
+> hyperparameter search. Unrun items are marked `NOT RUN`, and five runs that
+> diverged are recorded as `DIVERGED` rather than omitted.
+> See [Honesty policy](#12-honesty-policy).
 
 ---
 
@@ -390,6 +408,41 @@ domains is 0.657–0.723; handing a clinician the least-confident 30% of cases
 cuts the automated error rate by only 17–33%, and works *worst* on EyePACS
 where it is needed most. Temperature scaling is monotonic, so these numbers are
 identical before and after calibration.
+
+## 11f. Foundation model: the protocol decides the answer
+
+RETFound (ViT-L/16, MAE, ~1.6 M retinal images) against
+`vit_large_patch16_224.mae` — **the checkpoint RETFound's own args name as its
+initialisation**. Same architecture, same 303.3 M parameters, same objective,
+same splits; the pretraining corpus is the only variable.
+
+**Frozen features, linear probe, 5 seeds**
+([`docs/PHASE12_FOUNDATION_MODEL.md`](docs/PHASE12_FOUNDATION_MODEL.md)):
+
+| Target | RETFound | ImageNet-MAE | Δ | Δ/SD | verdict |
+|---|---|---|---|---|---|
+| DDR | 0.5103 | **0.5805** | +0.0702 | 2.42× | ImageNet better |
+| APTOS | 0.4796 | **0.5872** | +0.1075 | 1.95× | ImageNet better |
+| IDRiD | 0.6701 | 0.6275 | −0.0426 | 1.24× | CI spans zero |
+
+**Both fine-tuned identically, last 4 of 24 blocks**
+([`docs/PHASE13_FINETUNE.md`](docs/PHASE13_FINETUNE.md)):
+
+| Target | RETFound | ImageNet-MAE | Δ | Δ/SD | verdict |
+|---|---|---|---|---|---|
+| DDR (n=5) | 0.6966 | 0.7183 | +0.0217 | 0.82× | within seed noise |
+| APTOS (n=5) | 0.8261 | 0.8334 | +0.0073 | 0.42× | within seed noise |
+| IDRiD (n=3) | **0.7844** | 0.7285 | −0.0559 | 1.25× | **RETFound better** |
+
+**The two protocols disagree.** The frozen probe shows a large gap on two of
+three targets; fine-tuning shows none, and reverses on the third. Linear probing
+is the standard cheap benchmark for a foundation model, and here it does not
+predict the model's behaviour when used as intended.
+
+EyePACS is excluded as a target throughout: it is **in RETFound's pretraining
+corpus**, so using it would report leakage as generalization.
+`assert_target_not_pretrained` raises rather than warns, in both
+`run_retfound_probe.py` and `run_lodo.py`.
 
 ## 12. Honesty policy
 

@@ -493,7 +493,7 @@ co-occurrence noting the collision is coincidental.
 | ~~Single-source external~~ | done | **COMPLETE** (Phase 7). Bounded the EyePACS size confound at ~1/3 size, ~2/3 shift — and falsified the multi-source premise. |
 | Seeds on in-domain runs | ~1 h | Medium — the deployment-cost deltas carry the in-domain model's unmeasured variance. |
 | Multiple-comparison correction | free | Medium — `paired_bootstrap_difference` returns `"note": "uncorrected for multiple comparisons"`. Apply Holm–Bonferroni before calling anything significant. |
-| DINOv2 / foundation-model baseline | ~2 h | Medium — reviewers increasingly expect one. |
+| ~~DINOv2 / foundation-model baseline~~ | — | **DONE.** RETFound vs its own ImageNet-MAE initialisation, frozen and fine-tuned, 5 seeds — Phases [12](PHASE12_FOUNDATION_MODEL.md) and [13](PHASE13_FINETUNE.md). |
 | Hyperparameter sensitivity | high | Low — but state plainly that no search was performed, on any domain. |
 
 The first two are cheap and would materially strengthen the paper.
