@@ -47,6 +47,71 @@ ALL_DOMAINS = ["ddr", "aptos", "idrid", "eyepacs"]
 IRM_ANNEAL_ITERS: int | None = None
 # Set by --trainable-blocks. None means the whole backbone trains.
 TRAINABLE_BLOCKS: int | None = None
+# Set by --full-finetune. Distinct from --trainable-blocks 24, which is NOT
+# full fine-tuning: freeze_backbone() freezes everything and then unfreezes only
+# the modules _find_blocks() returns, which for a timm ViT leaves cls_token,
+# pos_embed, patch_embed.proj.{weight,bias} and norm.{weight,bias} frozen --
+# six tensors, verified. Passing trainable_blocks=None instead never freezes
+# anything, and assert_full_finetune() checks that afterwards rather than
+# trusting it.
+FULL_FINETUNE = False
+# Set by --gradient-checkpointing. Recorded because it changes memory and step
+# time but must not change results; if it ever does, that is a bug worth seeing.
+GRADIENT_CHECKPOINTING = False
+
+
+def enable_gradient_checkpointing(model) -> None:
+    """Turn on timm gradient checkpointing, or refuse.
+
+    timm exposes ``set_grad_checkpointing`` on the models that support it. If
+    the selected backbone does not, this raises rather than returning quietly:
+    a silent no-op would let a full fine-tune be launched on a memory budget
+    that assumed checkpointing was active, and it would OOM hours later with no
+    indication of why.
+    """
+    backbone = getattr(model, "backbone", model)
+    setter = getattr(backbone, "set_grad_checkpointing", None)
+    if setter is None or not callable(setter):
+        raise RuntimeError(
+            f"{type(backbone).__name__} exposes no set_grad_checkpointing(); "
+            "gradient checkpointing was requested but cannot be enabled. "
+            "Re-measure VRAM before running without it."
+        )
+    setter(True)
+
+
+def adaptation_mode() -> str:
+    """The protocol, in words, for the registry and the paper."""
+    if FULL_FINETUNE:
+        return "full_finetune"
+    if TRAINABLE_BLOCKS is None:
+        return "full_network"          # every pre-ViT run: no freezing applied
+    if TRAINABLE_BLOCKS == 0:
+        return "linear_probe"
+    return f"partial_finetune_{TRAINABLE_BLOCKS}"
+
+
+def assert_full_finetune(model) -> tuple[int, int]:
+    """Refuse to call a run 'full fine-tuning' unless everything trains.
+
+    Returns (total, trainable) parameter counts. Raises if any backbone tensor
+    is frozen, because a run labelled full_finetune that silently froze the
+    patch embedding would answer a different question from the one the paper
+    says it answers, and nothing downstream would reveal it.
+    """
+    frozen = [n for n, p in model.named_parameters() if not p.requires_grad]
+    if frozen:
+        raise RuntimeError(
+            f"--full-finetune requested but {len(frozen)} parameter tensor(s) "
+            f"are frozen: {frozen[:8]}{' ...' if len(frozen) > 8 else ''}. "
+            "This is exactly the failure mode --trainable-blocks 24 has."
+        )
+    total = sum(p.numel() for p in model.parameters())
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    if total != trainable:
+        raise RuntimeError(
+            f"full fine-tuning: {trainable:,} of {total:,} parameters trainable")
+    return total, trainable
 # Set by --learning-rate. A 304 M ViT-L is not fine-tuned at a 7 M CNN's rate.
 LEARNING_RATE: float = 3e-4
 
@@ -70,7 +135,10 @@ def _method_tag(method_name: str) -> str:
     # Partial fine-tuning and a non-default learning rate are different
     # configurations, not re-runs, and must not share an id with the full-network
     # run at 3e-4 -- one would overwrite the other's checkpoint and predictions.
-    if TRAINABLE_BLOCKS is not None:
+    if FULL_FINETUNE:
+        # Unambiguous and cannot collide with any tb* id.
+        tag += "-ftfull"
+    elif TRAINABLE_BLOCKS is not None:
         tag += f"-tb{TRAINABLE_BLOCKS}"
     if LEARNING_RATE != 3e-4:
         tag += f"-lr{LEARNING_RATE:g}"
@@ -148,7 +216,10 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
     backbone = BackboneConfig(
         name=BACKBONE,
         image_size=resolve_input_size(BACKBONE, IMAGE_SIZE),
-        trainable_blocks=TRAINABLE_BLOCKS,
+        # None means build_model never calls freeze_backbone at all, which is
+        # what full fine-tuning requires. Passing 24 would freeze and then
+        # partially unfreeze, leaving six tensors frozen.
+        trainable_blocks=None if FULL_FINETUNE else TRAINABLE_BLOCKS,
     )
     class_counts = (
         experiment.train["grade"].value_counts().reindex(range(5), fill_value=0).tolist()
@@ -157,7 +228,15 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
     if IRM_ANNEAL_ITERS is not None:
         method.irm_anneal_iters = IRM_ANNEAL_ITERS
     built = build_method(method, backbone, class_counts=class_counts, device="cuda")
+    if FULL_FINETUNE:
+        assert_full_finetune(built.model)
+    if GRADIENT_CHECKPOINTING:
+        enable_gradient_checkpointing(built.model)
     total, trainable = count_parameters(built.model)
+    print(f"    adaptation: {adaptation_mode()} | {trainable / 1e6:.1f}M of "
+          f"{total / 1e6:.1f}M trainable "
+          f"({100 * trainable / total:.1f}%) | "
+          f"grad-checkpointing={GRADIENT_CHECKPOINTING}", flush=True)
 
     train_config = TrainConfig(
         epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE,
@@ -228,6 +307,17 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "image_size": IMAGE_SIZE, "batch_size": BATCH_SIZE,
         "domain_balanced": DOMAIN_BALANCED,
         "irm_anneal_iters": method.irm_anneal_iters,
+        # These three were written to the summary row but not to the registry,
+        # so 27 of the 33 runs whose experiment id says "tb4" carried NaN in the
+        # registry's trainable_blocks column. The registry is the authoritative
+        # record, so an id and its own record disagreed about what was trained.
+        # adaptation_mode is the human-readable form and exists so a reader
+        # never has to infer the protocol from a block count.
+        "adaptation_mode": adaptation_mode(),
+        "trainable_blocks": TRAINABLE_BLOCKS,
+        "gradient_checkpointing": GRADIENT_CHECKPOINTING,
+        "params_total_m": round(total / 1e6, 2),
+        "params_trainable_m": round(trainable / 1e6, 2),
         "accumulation_steps": 1, "effective_batch_size": BATCH_SIZE,
         "learning_rate": LEARNING_RATE, "weight_decay": 1e-4,
         "epochs_planned": EPOCHS, "epochs_run": len(history), "seed": seed,
@@ -321,10 +411,23 @@ def main() -> None:
     global IRM_ANNEAL_ITERS
     _anneal = _take("--irm-anneal-iters", "")
     IRM_ANNEAL_ITERS = int(_anneal) if _anneal else None
-    global TRAINABLE_BLOCKS, LEARNING_RATE
+    global TRAINABLE_BLOCKS, LEARNING_RATE, FULL_FINETUNE, GRADIENT_CHECKPOINTING
     _blocks = _take("--trainable-blocks", "")
     TRAINABLE_BLOCKS = int(_blocks) if _blocks else None
     LEARNING_RATE = float(_take("--learning-rate", str(LEARNING_RATE)))
+    if "--full-finetune" in arguments:
+        arguments.remove("--full-finetune")
+        FULL_FINETUNE = True
+        if TRAINABLE_BLOCKS is not None:
+            raise SystemExit(
+                "--full-finetune and --trainable-blocks are mutually exclusive: "
+                "--trainable-blocks 24 is NOT full fine-tuning (it leaves the "
+                "patch embedding, position embedding, cls token and final norm "
+                "frozen). Pass only --full-finetune."
+            )
+    if "--gradient-checkpointing" in arguments:
+        arguments.remove("--gradient-checkpointing")
+        GRADIENT_CHECKPOINTING = True
     seeds = [int(s) for s in _take("--seeds", "42").split(",")]
     targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
 

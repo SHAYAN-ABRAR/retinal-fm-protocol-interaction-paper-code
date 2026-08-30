@@ -42,11 +42,26 @@ def test_eyepacs_is_refused_as_a_target():
 
 @pytest.mark.parametrize("target", ["ddr", "aptos", "idrid"])
 def test_unnamed_domains_are_allowed_but_flagged(target, caplog):
-    """Not named in the corpus is weaker than confirmed absent, and must warn."""
-    assert PRETRAINING_OVERLAP[target] == "unknown"
-    with caplog.at_level("WARNING"):
+    """Allowed as targets, with the basis for that recorded.
+
+    RETFound's published CFP corpus is 90.2% MEH-MIDAS and 9.8% EyePACS
+    (Zhou et al., Nature 2023) -- an enumerated composition, so these three are
+    not in it. The claim rests on the publication, not on the checkpoint, which
+    carries no manifest of what it saw; the log says so rather than either
+    asserting the datasets are clean or overstating the uncertainty.
+    """
+    assert PRETRAINING_OVERLAP[target] == "not_in_published_corpus"
+    with caplog.at_level("INFO"):
         assert_target_not_pretrained(target)
-    assert any("not named" in record.message for record in caplog.records)
+    assert any("published CFP pretraining corpus" in record.message
+               for record in caplog.records)
+
+
+def test_eyepacs_is_still_refused_outright():
+    """The only status that blocks a target is confirmed pretraining overlap."""
+    assert PRETRAINING_OVERLAP["eyepacs"] == "confirmed"
+    with pytest.raises(ValueError, match="pretraining corpus"):
+        assert_target_not_pretrained("eyepacs")
 
 
 def test_the_probe_runner_excludes_eyepacs_by_default():

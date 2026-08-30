@@ -19,11 +19,12 @@ remaining in the *training* pool for a DDR/APTOS/IDRiD target is fine. Only the
 target must be unseen. ``assert_target_not_pretrained`` enforces this, and it
 raises rather than warns.
 
-DDR, APTOS and IDRiD are *not named* in RETFound's pretraining description,
-which is weaker than confirmed absent -- the Nature paper says "MEH-MIDAS and
-public datasets" without enumerating the latter in the accessible text. That
-uncertainty is recorded in PRETRAINING_OVERLAP and belongs in the paper's
-limitations, not in a comment nobody reads.
+DDR, APTOS and IDRiD are not in the published CFP corpus, which the Nature 2023
+paper gives as 90.2% MEH-MIDAS and 9.8% Kaggle EyePACS -- an enumerated
+composition, not an open-ended list. They appear there as downstream evaluation
+datasets. This is publication-level evidence, not checkpoint-level: the released
+weights carry no manifest of what they saw. The limitation to state is that
+distinction, not a blanket "overlap unknown".
 
 What the checkpoint actually is
 -------------------------------
@@ -86,11 +87,18 @@ CHECKPOINT_FILENAME = "RETFound_mae_natureCFP.pth"
 
 # What is known about the overlap between RETFound's pretraining corpus and this
 # project's four domains. "unknown" is deliberately not "clean".
+# RETFound's CFP corpus is reported in the Nature 2023 paper as 90.2%
+# MEH-MIDAS and 9.8% Kaggle EyePACS. That is an enumerated composition summing
+# to 100%, not an open-ended "and public datasets" list, so APTOS, IDRiD and DDR
+# are described there as downstream evaluation datasets rather than pretraining
+# data. Recording them as "unknown" overstated the uncertainty against the
+# published description; they are now "not_in_published_corpus", which says what
+# the evidence supports without asserting more than a paper can.
 PRETRAINING_OVERLAP: dict[str, str] = {
-    "eyepacs": "confirmed",   # named in the pretraining description
-    "ddr": "unknown",         # not named; the public-dataset list is not enumerated
-    "aptos": "unknown",
-    "idrid": "unknown",
+    "eyepacs": "confirmed",   # 9.8% of the published CFP pretraining corpus
+    "ddr": "not_in_published_corpus",
+    "aptos": "not_in_published_corpus",
+    "idrid": "not_in_published_corpus",
 }
 
 # At least this fraction of the model's parameters must come from the checkpoint
@@ -114,11 +122,12 @@ def assert_target_not_pretrained(target: str) -> None:
             "It remains valid as a SOURCE domain. Use ddr, aptos or idrid as "
             "the target instead."
         )
-    if status == "unknown":
-        log.warning(
-            "%s is not named in RETFound's pretraining description, but that "
-            "description does not enumerate its public datasets. Treat this as "
-            "'overlap not ruled out' in the paper's limitations, not as clean.",
+    if status != "confirmed":
+        log.info(
+            "%s is not part of RETFound's published CFP pretraining corpus "
+            "(90.2%% MEH-MIDAS, 9.8%% EyePACS; Zhou et al., Nature 2023). This "
+            "rests on the publication rather than on checkpoint-level evidence, "
+            "which the released weights do not carry.",
             target,
         )
 

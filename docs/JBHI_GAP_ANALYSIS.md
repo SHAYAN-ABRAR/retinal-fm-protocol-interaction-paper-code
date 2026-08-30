@@ -124,7 +124,38 @@ first.
 
 ---
 
-## 5. Status
+## 5. Revised status after the free P0 pass (2026-08-30)
+
+| # | Item | Was | Now |
+|---|---|---|---|
+| 5 | Crossed seed×case bootstrap | P0 open | **DONE** — `src/evaluation/crossed_bootstrap.py`, `analyse_crossed.py`, 6 tests. Changed 3 of 6 verdicts. |
+| 2a | Rename to partial fine-tuning | P0 open | **DONE** — `adaptation_mode()`; registry records `partial_finetune_4` |
+| 2b | True `--full-finetune` mode | P0 open | **DONE (code)** — proven to leave 0 tensors frozen; `--trainable-blocks 24` leaves 6 |
+| 4 | Registry configuration bug | not in original table | **DONE** — 90 NaN rows backfilled; 6 tests pin id↔record agreement |
+| 8 | Size-vs-shift reframing | P0 open | **DONE (README)** — reframed as fitted sensitivity model, 2.77× extrapolation stated. Phase 9 + manuscript still to update |
+| 10 | Source-only vs full-artifact audit | P0 open | **PARTIAL** — README now states which audit a clean clone can run. Bundle + fetch script still to build |
+| 15 | Ethics wording | P0 open | **DONE** — no longer asserts approval was not required |
+| 14b | LaTeX build gate | P0 open | **DONE** — `paper/build.sh`; fails on orphaned commands, missing files, numeric drift. LaTeX checks report SKIPPED (pdflatex absent), not passed |
+| 11 | Literature novelty audit | P1 | **PROMOTED TO P0, DONE** — `docs/LITERATURE_NOVELTY_AUDIT.md` |
+| 8b | RETFound provenance | not in original table | **DONE** — published corpus is 90.2% MEH-MIDAS + 9.8% EyePACS; `"unknown"` → `"not_in_published_corpus"` |
+
+### Still open
+
+| # | Item | Priority | Needs |
+|---|---|---|---|
+| 4 | Resolution/batch confound | **P0** | Q1, ~4 h GPU |
+| 2c | Full FT evidence | **P0** | smoke test, then 5 paired seeds |
+| 8c | Phase 9 + manuscript reframing | P0 | writing |
+| 10b | Prediction bundle + fetch script | P0 | packaging |
+| 6 | Calibration section | P1 | analysis of existing runs |
+| 7 | Referable-DR outcomes | P1 | analysis |
+| 9 | Provenance table generator | P1 | writing |
+| 13 | CLAIM / TRIPOD+AI checklists | P1 | writing |
+| 3 | Source-validation-tuned recipe | P1 | ~10 h GPU |
+
+---
+
+## 6. Status
 
 **STOPPED for approval before any GPU run**, as instructed. The free P0 work
 (items 5, 8, 10, 15, 14b) can begin immediately on request — it is the larger

@@ -8,6 +8,16 @@
 > the authoritative record — the summary tables are derived from it and
 > `audit_consistency.py` checks they agree.
 >
+> **Two audit modes, and what a clean clone can actually do.**
+> `outputs/predictions/`, `outputs/checkpoints/`, `outputs/logs/` and
+> `outputs/embeddings/` are gitignored, so a fresh clone has the registry and
+> the summary tables but **not** the per-image predictions. It can therefore run
+> the *source-and-table* audit (row-level agreement between tables and registry)
+> but **not** the *prediction-level* audit (recomputing each metric from saved
+> predictions). The 2786-check figure below is from a working tree with
+> artifacts present. A prediction bundle for full reproduction is pending —
+> see [`docs/JBHI_GAP_ANALYSIS.md`](docs/JBHI_GAP_ANALYSIS.md) item 10.
+>
 > **Headline results**
 >
 > - **A linear probe and a fine-tune rank two foundation models differently.**
@@ -29,8 +39,10 @@
 > - **Cross-domain deployment costs 0.138 QWK on DDR and 0.291 on EyePACS**,
 >   measured against in-domain models on identical images, with severe errors
 >   up 107% and 155%.
-> - **Shift, not scale.** Training-set size explains 6% of the EyePACS gap;
->   domain shift explains 94%.
+> - **Shift, not scale.** A fitted subsampling sensitivity model suggests
+>   training-set size alone accounts for only a minority of the EyePACS gap.
+>   This is an extrapolation 2.77× beyond the largest measured subsample and is
+>   **not** a causal decomposition; see the caveat in Phase 9.
 >
 > **Two bars for every claim.** An effect counts only if it exceeds the
 > across-seed SD *and* its paired bootstrap CI excludes zero. Three separate
