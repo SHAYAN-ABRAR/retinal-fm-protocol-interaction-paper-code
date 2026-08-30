@@ -3,7 +3,7 @@
 **Protocol:** frozen features, linear probe, leave-one-domain-out
 **Backbones:** RETFound CFP · ImageNet-MAE ViT-L/16 · DenseNet121 (ImageNet)
 **Targets:** DDR · APTOS · IDRiD — **EyePACS excluded, see §1**
-**Seeds:** 42 / 1 / 2 / 3 / 4 — **five** · 45 probes · 224 px
+**Seeds:** 42 / 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 — **ten** · 90 probes · 224 px
 **Date:** 2026-08-26 → 2026-08-29 · ~1.5 h GPU
 **Generators:** `run_retfound_probe.py --backbone …` · `analyse_linear_probe.py --control …`
 
@@ -23,18 +23,18 @@ this modality.
 ## 0. Answer
 
 **As a frozen feature extractor, RETFound transfers worse across domains than the
-general-purpose checkpoint it was built from — on two of three targets, at five
+general-purpose checkpoint it was built from — on two of three targets, at ten
 seeds.**
 
 | target | RETFound | ImageNet-MAE ViT-L | Δ | Δ/SD | verdict |
 |---|---|---|---|---|---|
-| DDR | 0.5103 | **0.5805** | +0.0702 | **2.42×** | ImageNet features better |
-| APTOS | 0.4796 | **0.5872** | +0.1075 | **1.95×** | ImageNet features better |
-| IDRiD | **0.6701** | 0.6275 | −0.0426 | 1.24× | within seed noise (CI spans zero) |
+| DDR | 0.5130 | **0.5756** | +0.0626 | **2.46×** | ImageNet features better |
+| APTOS | 0.4829 | **0.5963** | +0.1134 | **2.07×** | ImageNet features better |
+| IDRiD | **0.6792** | 0.6363 | −0.0429 | 1.25× | within seed noise (CI spans zero) |
 
-This survived going from three seeds to five, and **strengthened** on APTOS
-(1.37× → 1.95×). That matters, because the fine-tuned arm did not survive the
-same test — see Phase 13, and §5 here.
+This survived three seeds, then five, then ten, and **strengthened** on APTOS at
+every step (1.37× → 1.95× → 2.07×). That matters, because the fine-tuned arm
+did not survive the same test — see Phase 13, and §5 here.
 
 ---
 
@@ -87,25 +87,25 @@ that description does not enumerate its public datasets. They are recorded as
 | target | source QWK | | target QWK | | **source → target drop** | |
 |---|---|---|---|---|---|---|
 | | RETFound | MAE | RETFound | MAE | RETFound | MAE |
-| DDR | 0.5984 | 0.5954 | 0.5103 | 0.5805 | **0.0880** | 0.0149 |
-| APTOS | 0.6343 | 0.6513 | 0.4796 | 0.5872 | **0.1547** | 0.0642 |
-| IDRiD | 0.6462 | 0.6595 | 0.6701 | 0.6275 | −0.0239 | 0.0320 |
+| DDR | 0.6001 | 0.5953 | 0.5130 | 0.5756 | **0.0872** | 0.0198 |
+| APTOS | 0.6343 | 0.6495 | 0.4829 | 0.5963 | **0.1514** | 0.0532 |
+| IDRiD | 0.6472 | 0.6591 | 0.6792 | 0.6363 | −0.0320 | 0.0228 |
 
 **Source fit is near-identical** — as it must be for one architecture on one
 task. RETFound does not fit the training domains better and then fail to
 transfer. It fits them the *same* and transfers *worse*: its drop from source to
-target is 5.9× larger on DDR and 2.4× larger on APTOS.
+target is 4.4× larger on DDR and 2.8× larger on APTOS.
 
 Severe errors (|error| ≥ 2 grades) follow on the two targets where the QWK gap
 clears both bars:
 
 | target | RETFound | ImageNet-MAE |
 |---|---|---|
-| DDR | 0.3201 | 0.2881 |
-| APTOS | **0.4219** | 0.3037 |
-| IDRiD | 0.2028 | 0.2036 |
+| DDR | 0.3183 | 0.2869 |
+| APTOS | **0.4286** | 0.2997 |
+| IDRiD | 0.1970 | 0.1980 |
 
-On APTOS, RETFound severely misgrades 42% of images against the control's 30%.
+On APTOS, RETFound severely misgrades 43% of images against the control's 30%.
 
 ### The DenseNet control, and the confound it left open
 
@@ -113,9 +113,9 @@ A second control was run first: DenseNet121, ImageNet, frozen, same pipeline.
 
 | target | RETFound | DenseNet121 | Δ | Δ/SD | verdict |
 |---|---|---|---|---|---|
-| DDR | 0.5103 | 0.5509 | +0.0405 | 2.34× | ImageNet features better |
-| APTOS | 0.4796 | 0.5212 | +0.0416 | 0.68× | within seed noise |
-| IDRiD | 0.6701 | 0.6991 | +0.0289 | 0.87× | within seed noise |
+| DDR | 0.5130 | 0.5504 | +0.0375 | 2.79× | ImageNet features better |
+| APTOS | 0.4829 | 0.5217 | +0.0388 | 0.92× | within seed noise |
+| IDRiD | 0.6792 | 0.7018 | +0.0226 | 0.94× | within seed noise |
 
 ImageNet features score higher on 3 of 3, but only DDR clears both bars — and
 this comparison confounds four variables at once (architecture, scale,
@@ -162,8 +162,9 @@ assumed, so its numbers were unaffected.
   models and the difference disappears. Any sentence of the form "RETFound is
   worse for cross-domain DR" is unsupported; the supported sentence is
   "RETFound's *frozen representation* is worse."
-- **IDRiD does not agree**, and under fine-tuning it reverses. It is also the
-  smallest target at 507 images.
+- **IDRiD does not agree**, and under fine-tuning it reverses into a result
+  favouring RETFound at five seeds (Phase 13). It is also the smallest target,
+  at 507 images.
 - **Not a claim about foundation models in general** — one model, one modality,
   one downstream task.
 - **Overlap is not ruled out** for DDR, APTOS and IDRiD (§1).
@@ -176,9 +177,9 @@ Taken alone this phase would say "domain-specific pretraining hurts transfer".
 Taken with Phase 13 it says something more useful and more defensible:
 
 **A linear probe ranks these two models in a way that fine-tuning does not
-reproduce.** The frozen gap is large (+0.0702, +0.1075) and clears both bars on
-two targets; after fine-tuning no target favours the ImageNet initialisation and
-IDRiD favours RETFound. Probing is the standard shortcut for benchmarking a
+reproduce.** The frozen gap is large (+0.0626, +0.1134) and clears both bars on two targets
+at ten seeds; after fine-tuning no target favours the ImageNet initialisation
+and IDRiD favours RETFound with all five seeds agreeing. Probing is the standard shortcut for benchmarking a
 foundation model, and here it gives the wrong answer about how the model will
 actually be used.
 

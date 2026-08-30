@@ -2,7 +2,7 @@
 
 **Protocol:** partial fine-tuning, last 4 of 24 blocks (50.4 M of 303.3 M trainable, **identical on both models**)
 **Backbones:** RETFound CFP · ImageNet-MAE ViT-L/16
-**Targets:** DDR (5 seeds) · APTOS (5 seeds) · IDRiD (3 seeds)
+**Targets:** DDR · APTOS · IDRiD — **five seeds each**
 **Settings:** batch 16, lr 1e-4, 20 epochs, early stopping patience 6
 **Date:** 2026-08-27 → 2026-08-29 · ~40 h GPU over 26 runs
 **Generator:** `analyse_finetune.py` → `outputs/tables/finetune_comparison.csv`
@@ -25,18 +25,18 @@ initialisation, and IDRiD favours RETFound.**
 |---|---|---|---|---|---|---|
 | DDR (n=5) | 0.6966 | 0.7183 | +0.0217 | 0.82× | 3/5 | within seed noise |
 | APTOS (n=5) | 0.8261 | 0.8334 | +0.0073 | 0.42× | 4/5 | within seed noise |
-| IDRiD (n=3) | **0.7844** | 0.7285 | −0.0559 | **1.25×** | 3/3 | **RETFound better** |
+| IDRiD (n=5) | **0.7676** | 0.7252 | −0.0423 | **1.13×** | **5/5** | **RETFound better** |
 
 Set against Phase 12's frozen result on the same models, targets and splits:
 
 | target | frozen Δ (Δ/SD) | fine-tuned Δ (Δ/SD) |
 |---|---|---|
-| DDR | **+0.0702 (2.42×)** | +0.0217 (0.82×) |
-| APTOS | **+0.1075 (1.95×)** | +0.0073 (0.42×) |
-| IDRiD | −0.0426 (1.24×, CI spans 0) | **−0.0559 (1.25×)** |
+| DDR | **+0.0626 (2.46×)** | +0.0217 (0.82×) |
+| APTOS | **+0.1134 (2.07×)** | +0.0073 (0.42×) |
+| IDRiD | −0.0429 (1.25×, CI spans 0) | **−0.0423 (1.13×)** |
 
-Fine-tuning shrinks the DDR gap by 69% and the APTOS gap by 93%, and flips
-IDRiD from a null into a result favouring RETFound.
+Fine-tuning shrinks the DDR gap by 65% and the APTOS gap by 94%, and turns
+IDRiD's null into a result favouring RETFound that all five seeds agree on.
 
 ---
 
@@ -94,17 +94,23 @@ otherwise covered exactly the two targets where the frozen comparison had gone
 one way, and omitted the one where it had not. Reporting two wins with the
 ambiguous case absent is not defensible regardless of the reason.
 
-It came out favouring RETFound: −0.0559, 1.25× the across-seed SD, all three
-seeds agreeing, bootstrap CI [−0.1501, −0.0605] excluding zero. Severe errors
-agree — 0.0861 against the control's 0.1368.
+It came out favouring RETFound, and unlike the other two it survived the extra
+seeds: −0.0423 at 1.13× the across-seed SD, **all five seeds agreeing in sign**,
+bootstrap CI [−0.1501, −0.0605] excluding zero. Severe errors agree — 0.0899
+against the control's 0.1321.
+
+Seeds 3 and 4 were run precisely because this phase argues three is not enough,
+and it would have been indefensible to apply that standard to the two nulls and
+not to the one positive result. It held.
 
 Two caveats, stated because they cut against the result being over-read:
 
 - **507 test images.** The smallest target in the project by an order of
-  magnitude. Bootstrap intervals are correspondingly wide.
-- **Three seeds, not five.** By this phase's own argument (§1), that is not
-  enough to trust an SD. The honest reading is "IDRiD does not support the
-  Phase 12 direction and may point the other way", not "RETFound wins on IDRiD".
+  magnitude, so the bootstrap interval is correspondingly wide.
+- **1.13× is marginal.** It clears the bar, but by less than either frozen
+  result does, and this project has watched 1.03× and 1.58× both collapse. The
+  honest reading is "IDRiD reverses the Phase 12 direction", not "RETFound is
+  better on IDRiD by a comfortable margin".
 
 ---
 
@@ -115,7 +121,7 @@ Two caveats, stated because they cut against the result being over-read:
 | | RETFound | MAE | RETFound | MAE | RETFound | MAE |
 | DDR | 0.7076 | 0.7029 | 0.6966 | 0.7183 | +0.0109 | −0.0154 |
 | APTOS | 0.7614 | 0.7506 | 0.8261 | 0.8334 | −0.0647 | −0.0827 |
-| IDRiD | 0.7671 | 0.7586 | 0.7844 | 0.7285 | −0.0172 | +0.0301 |
+| IDRiD | 0.7673 | 0.7580 | 0.7676 | 0.7252 | −0.0002 | +0.0328 |
 
 RETFound fits the source domains marginally *better* on all three targets once
 fine-tuned, which it did not do as a frozen extractor. Whatever the frozen
@@ -129,10 +135,10 @@ two nulls, and IDRiD favouring RETFound:
 |---|---|---|
 | DDR | 0.2066 | 0.1906 |
 | APTOS | 0.0906 | 0.0874 |
-| IDRiD | **0.0861** | 0.1368 |
+| IDRiD | **0.0899** | 0.1321 |
 
-Compare Phase 12's frozen severe-error gaps on the same targets — 0.3201 against
-0.2881 on DDR, and 0.4219 against 0.3037 on APTOS. Fine-tuning roughly halves
+Compare Phase 12's frozen severe-error gaps on the same targets — 0.3183
+against 0.2869 on DDR, and 0.4286 against 0.2997 on APTOS. Fine-tuning roughly halves
 the severe-error rate for both models and closes the gap between them.
 
 ---
@@ -147,7 +153,8 @@ the severe-error rate for both models and closes the gap between them.
   batch 16, so it is affordable here and remains the obvious follow-up.
 - **Not tuned per model.** Both get lr 1e-4 and the same schedule, which is what
   makes the comparison matched, and also means neither is at its own optimum.
-- **IDRiD is three seeds** (§2).
+- **IDRiD clears its bar by the smallest margin in the study** (1.13×), on the
+  smallest target (§2).
 
 ---
 
@@ -167,7 +174,8 @@ The paper's honest statement is therefore about **evaluation protocol**, not
 about RETFound: how you measure a medical foundation model determines the
 conclusion you reach, and the cheap measurement disagrees with the expensive
 one. That is a claim this project can defend at five seeds, with a matched
-architecture, on three targets, at two protocol levels.
+architecture, on three targets, at two protocol levels, with the frozen arm at
+ten seeds and the fine-tuned arm at five.
 
 ---
 

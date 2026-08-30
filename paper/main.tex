@@ -44,11 +44,12 @@ general-purpose initialisation transfers better on two of three held-out
 domains ($+0.070$ and $+0.108$ QWK, $2.4\times$ and $2.0\times$ the across-seed
 standard deviation, five seeds). When both models are fine-tuned identically
 the difference disappears: no held-out domain favours the general-purpose
-initialisation, and the smallest domain favours RETFound. The cheap protocol and
+initialisation, and the smallest domain reverses to favour RETFound with all
+five seeds agreeing. The cheap protocol and
 the deployed protocol therefore rank the same two models differently on the same
 data. We situate this within a broader evaluation of cross-domain DR grading on
 four public datasets under a strict leave-one-domain-out protocol
-(\num{229} training runs): no domain-generalization objective beats empirical
+(\num{278} training runs): no domain-generalization objective beats empirical
 risk minimisation on either target tested, whereas doubling input resolution
 improves held-out QWK by up to $0.097$ and reduces severe misgrades by
 22--48\%. Across the study, three separate effects were statistically
@@ -218,13 +219,15 @@ report how often each method's machinery was degenerate.
 \subsection{The two protocols disagree}
 \label{sec:protocol}
 Table~\ref{tab:foundation} and Fig.~\ref{fig:protocol} give the comparison.
-Frozen, the general-purpose initialisation is ahead on DDR
-($+0.0702$, $2.42\times$ SD) and APTOS ($+0.1075$, $1.95\times$), both clearing
-Section~\ref{sec:bars}; IDRiD is within seed noise. Fine-tuned, no target
-favours it: DDR $+0.0217$ ($0.82\times$), APTOS $+0.0073$ ($0.42\times$), and
-IDRiD $-0.0559$ ($1.25\times$) favours RETFound.
+Frozen, at ten seeds, the general-purpose initialisation is ahead on DDR
+($+0.0626$, $2.46\times$ SD) and APTOS ($+0.1134$, $2.07\times$), both clearing
+Section~\ref{sec:bars}; IDRiD is within seed noise. Fine-tuned, at five seeds,
+no target favours it: DDR $+0.0217$ ($0.82\times$), APTOS $+0.0073$
+($0.42\times$), and IDRiD $-0.0423$ ($1.13\times$, all five seeds agreeing)
+favours RETFound.
 
-The mechanism is visible in the source--target split (Fig.~ef{fig:mechanism}). Frozen, both models fit
+The mechanism is visible in the source--target split
+(Fig.~\ref{fig:mechanism}). Frozen, both models fit
 the source domains almost identically (within $0.017$ QWK on every target); the
 entire difference is the drop from source to target, which is $5.9\times$ larger
 for RETFound on DDR and $2.4\times$ larger on APTOS. Fine-tuned, RETFound fits
@@ -304,7 +307,7 @@ the across-seed standard deviation it must clear.}
 \end{figure}
 
 \subsection{The cost of cross-domain deployment}
-Table~ef{tab:deployment} and Fig.~ef{fig:landscape} give the
+Table~\ref{tab:deployment} and Fig.~\ref{fig:landscape} give the
 comparison. Against in-domain models evaluated on identical test images,
 deployment to an unseen domain costs $0.138$ QWK on DDR and $0.291$ on EyePACS, with severe
 misgrades rising 107\% and 155\% respectively. A subsampling study attributes
@@ -349,10 +352,9 @@ domain-generalization literature does not study.
 \begin{itemize}
 \item \textbf{Partial fine-tuning.} The last 4 of 24 blocks were unfrozen. Full
       fine-tuning is affordable on the hardware used and remains untested.
-\item \textbf{IDRiD is the smallest target} (507 test images) and its
-      fine-tuned result rests on three seeds at the time of writing, which is
-      the sample size this paper argues is insufficient. \todo{update when
-      seeds 3--4 land}
+\item \textbf{IDRiD is the smallest target} (507 test images) and clears its
+      bar by the narrowest margin in the study ($1.13\times$). It is reported at
+      five seeds, the same standard applied to the two nulls.
 \item \textbf{Pretraining overlap is not ruled out} for DDR, APTOS and IDRiD.
 \item \textbf{One modality, one task, four datasets}, with documented label
       quality problems in at least two.
@@ -380,7 +382,7 @@ required no additional ethical approval. \todo{confirm per-dataset licence
 statements before submission}
 
 \section*{Reproducibility}
-All \num{229} runs are recorded in a machine-checked experiment registry; every
+All \num{278} runs are recorded in a machine-checked experiment registry; every
 table and figure in this paper is emitted by a script from that registry, and a
 consistency audit verifies the derived tables against it. Runs that diverged are
 recorded as such rather than omitted.

@@ -1,7 +1,7 @@
 # Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
 
-> **Status: Phases 1–13 complete. 328 tests, 2244 audit checks pass.**
-> **229 runs, 111 GPU-hours, 4 backbones, 3 protocols.**
+> **Status: Phases 1–13 complete. 328 tests, 2786 audit checks pass.**
+> **278 runs, 119 GPU-hours, 4 backbones, 3 protocols.**
 >
 > Full write-ups in [`docs/`](docs/). Every number below is produced by a script
 > in this repo and verified against `outputs/experiment_registry.csv`, which is
@@ -12,8 +12,8 @@
 >
 > - **A linear probe and a fine-tune rank two foundation models differently.**
 >   RETFound's *frozen* features transfer worse than the ImageNet-MAE ViT-L it
->   was built from — +0.0702 QWK on DDR (2.42× seed SD), +0.1075 on APTOS
->   (1.95×), 5 seeds. After fine-tuning both models identically, **no target
+>   was built from — +0.0626 QWK on DDR (2.46× seed SD), +0.1134 on APTOS
+>   (2.07×), 10 seeds. After fine-tuning both models identically, **no target
 >   favours the ImageNet initialisation** and IDRiD favours RETFound.
 >   Phases [12](docs/PHASE12_FOUNDATION_MODEL.md) and
 >   [13](docs/PHASE13_FINETUNE.md).
@@ -421,9 +421,9 @@ same splits; the pretraining corpus is the only variable.
 
 | Target | RETFound | ImageNet-MAE | Δ | Δ/SD | verdict |
 |---|---|---|---|---|---|
-| DDR | 0.5103 | **0.5805** | +0.0702 | 2.42× | ImageNet better |
-| APTOS | 0.4796 | **0.5872** | +0.1075 | 1.95× | ImageNet better |
-| IDRiD | 0.6701 | 0.6275 | −0.0426 | 1.24× | CI spans zero |
+| DDR | 0.5130 | **0.5756** | +0.0626 | 2.46× | ImageNet better |
+| APTOS | 0.4829 | **0.5963** | +0.1134 | 2.07× | ImageNet better |
+| IDRiD | 0.6792 | 0.6363 | −0.0429 | 1.25× | CI spans zero |
 
 **Both fine-tuned identically, last 4 of 24 blocks**
 ([`docs/PHASE13_FINETUNE.md`](docs/PHASE13_FINETUNE.md)):
@@ -432,7 +432,7 @@ same splits; the pretraining corpus is the only variable.
 |---|---|---|---|---|---|
 | DDR (n=5) | 0.6966 | 0.7183 | +0.0217 | 0.82× | within seed noise |
 | APTOS (n=5) | 0.8261 | 0.8334 | +0.0073 | 0.42× | within seed noise |
-| IDRiD (n=3) | **0.7844** | 0.7285 | −0.0559 | 1.25× | **RETFound better** |
+| IDRiD (n=5) | **0.7676** | 0.7252 | −0.0423 | 1.13× | **RETFound better** |
 
 **The two protocols disagree.** The frozen probe shows a large gap on two of
 three targets; fine-tuning shows none, and reverses on the third. Linear probing
