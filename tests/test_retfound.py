@@ -40,8 +40,42 @@ def test_eyepacs_is_refused_as_a_target():
         assert_target_not_pretrained("EyePACS")      # case must not evade it
 
 
+@pytest.fixture
+def project_log():
+    """Capture records from the project logger directly.
+
+    src/utils/logging.py sets propagate = False and attaches its own stdout
+    handler, so caplog's root handler is not guaranteed to see these records.
+    It happens to work today -- verified empirically, one record captured --
+    but that depends on pytest internals rather than on anything this project
+    controls, and a silent capture failure would turn every `any(... for record
+    in records)` assertion into a vacuous pass.
+
+    Attaching a handler to the logger under test removes that dependency. The
+    logger's own configuration is left exactly as it is; scientific logging
+    behaviour must not change to suit a test.
+    """
+    import logging
+
+    records = []
+
+    class Collect(logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    logger = logging.getLogger("dr_dg.models.retfound")
+    handler = Collect()
+    logger.addHandler(handler)
+    previous = logger.level
+    logger.setLevel(logging.INFO)
+    try:
+        yield records
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(previous)
+
 @pytest.mark.parametrize("target", ["ddr", "aptos", "idrid"])
-def test_unnamed_domains_are_allowed_but_flagged(target, caplog):
+def test_unnamed_domains_are_allowed_but_flagged(target, project_log):
     """Allowed as targets, with the basis for that recorded.
 
     RETFound's published CFP corpus is 90.2% MEH-MIDAS and 9.8% EyePACS
@@ -51,10 +85,10 @@ def test_unnamed_domains_are_allowed_but_flagged(target, caplog):
     asserting the datasets are clean or overstating the uncertainty.
     """
     assert PRETRAINING_OVERLAP[target] == "not_in_published_corpus"
-    with caplog.at_level("INFO"):
-        assert_target_not_pretrained(target)
-    assert any("published CFP pretraining corpus" in record.message
-               for record in caplog.records)
+    assert_target_not_pretrained(target)
+    assert project_log, "no log record captured -- the assertion below is vacuous"
+    assert any("published CFP pretraining corpus" in record.getMessage()
+               for record in project_log)
 
 
 def test_eyepacs_is_still_refused_outright():

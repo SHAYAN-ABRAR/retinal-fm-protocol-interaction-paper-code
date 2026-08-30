@@ -49,14 +49,17 @@ longer statistically detectable on any held-out domain. A direct
 difference-of-differences test of the protocol interaction is negative in
 direction on two of three domains with every seed agreeing, but does not reach
 significance at five seeds after correction; we report that rather than
-inferring interaction from discordant significance. The cheap protocol and
-the deployed protocol therefore rank the same two models differently on the same
-data. We situate this within a broader evaluation of cross-domain DR grading on
+inferring interaction from discordant significance. The point estimates therefore show substantial attenuation of the
+ImageNet-MAE advantage after partial fine-tuning on DDR and APTOS, but a direct
+test of the protocol interaction does not reach multiplicity-adjusted
+significance at the current five-seed budget. We report that limit rather than
+inferring an interaction from discordant significance, and we do not claim the
+protocols have been shown to be equivalent either. We situate this within a broader evaluation of cross-domain DR grading on
 four public datasets under a strict leave-one-domain-out protocol
 (\num{278} training runs): no domain-generalization objective beats empirical
-risk minimisation on either target tested, whereas doubling input resolution
-improves held-out QWK by up to $0.097$ and reduces severe misgrades by
-22--48\%. Across the study, three separate effects were statistically
+risk minimisation on either target tested, A configuration change from 224\,px at batch 32 to 512\,px at batch 16 improves
+held-out QWK by up to $0.097$, but that comparison alters resolution and batch
+size together and we do not currently separate them. Across the study, three separate effects were statistically
 significant under a paired bootstrap at three seeds and vanished at five. We
 argue that seed-level variance, not test-set sampling variance, is the binding
 uncertainty in this problem, and report every claim against both.
@@ -109,8 +112,10 @@ deployed, the two protocols support opposite summaries of the same comparison.
 \item A leave-one-domain-out evaluation of four domain-generalization
       objectives against ERM on two targets under two batch samplers, with
       diagnostics confirming each method's machinery engaged.
-\item A quantification of what \emph{does} move cross-domain performance:
-      input resolution dominates every method and architecture change tested.
+\item A quantification of what \emph{does} move cross-domain performance: a
+      higher-resolution configuration exceeds every method and architecture
+      change tested, though resolution and batch size are not yet separated
+      (Section~\ref{sec:resolution}).
 \item A methodological result of independent interest: three effects in this
       study were significant under a paired bootstrap at three seeds and
       disappeared at five. We report all claims against an across-seed
@@ -330,12 +335,23 @@ schedule and again under a schedule matched to the split's iteration count;
 we report this as instability rather than as a method comparison.
 
 \subsection{What does move cross-domain performance}
-Fig.~\ref{fig:ranking} ranks the interventions tested. Doubling input
-resolution from 224 to 512 px is the largest effect in the study: $+0.0967$ QWK
-on EyePACS ($4.8\times$ SD) with severe misgrades down 22--48\% across targets.
-A modern architecture at comparable cost (ConvNeXt-Tiny) is second at
-$+0.0554$ ($4.1\times$). Every domain-generalization objective, and
-domain-specific pretraining under fine-tuning, are within seed noise.
+\label{sec:resolution}
+Fig.~\ref{fig:ranking} ranks the interventions tested. The largest effect is a
+change of input configuration from 224\,px at batch 32 to 512\,px at batch 16:
+$+0.0967$ QWK on EyePACS ($4.8\times$ SD) with severe misgrades down 22--48\%
+across targets. A modern architecture at comparable cost (ConvNeXt-Tiny) is
+second at $+0.0554$ ($4.1\times$). Every domain-generalization objective, and
+domain-specific pretraining under partial fine-tuning, are within seed noise.
+
+\textbf{This is not yet a resolution effect.} The two configurations differ in
+resolution \emph{and} batch size, because 512\,px at batch 32 does not fit the
+8\,GB budget these experiments were run under. Attributing the gain to
+resolution alone would require a 224\,px/batch-16 control, which we have not
+run. We therefore report it as a configuration effect and separate the two
+factors in future work; the decomposition requires
+224/32 vs 224/16 (batch), 224/16 vs 512/16 (resolution) and 224/32 vs 512/16
+(combined). \todo{restore the resolution-specific claim once the 224/b16
+control is complete}
 
 \begin{figure}[t]
 \centering
