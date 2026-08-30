@@ -62,7 +62,9 @@ it is literally the model RETFound started from.
 Everything downstream is identical: same 1024-d features, same per-dimension
 standardisation fitted on source-training only, same linear head, same 200-epoch
 schedule, same splits, same temperature scaling. **The pretraining corpus is the
-only variable left.**
+intervention is the additional retinal-domain MAE
+pretraining stage that turns that checkpoint into RETFound -- a training stage,
+not merely a change of dataset.**
 
 ### EyePACS cannot be a target here
 

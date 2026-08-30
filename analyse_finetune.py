@@ -12,7 +12,9 @@ The comparison stays matched: both models are ViT-L/16 at 303.3 M parameters,
 both have exactly their last 4 of 24 blocks unfrozen (50.4 M trainable), both
 train at lr 1e-4, batch 16, on identical splits with identical augmentation.
 ``vit_large_patch16_224.mae`` is the checkpoint RETFound's own args name as its
-initialisation, so the pretraining corpus remains the only variable.
+initialisation. Architecture and downstream adaptation are matched, so the
+intervention is the additional retinal-domain MAE pretraining stage that turns
+that initialisation into RETFound -- not dataset identity alone.
 
 Source and target, again
 ------------------------

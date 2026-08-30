@@ -1,6 +1,6 @@
 \begin{table*}[t]
 \centering
-\caption{RETFound against the ImageNet MAE checkpoint it was initialised from, under two evaluation protocols. Architecture, parameter count, objective, splits, augmentation and schedule are identical; the pretraining corpus is the only variable. $\Delta$ is ImageNet-MAE minus RETFound, so a positive value favours the general-purpose initialisation. $\sigma$ is the standard deviation of the paired per-seed differences. Bold marks effects clearing both criteria of Section~\ref{sec:bars}; every other entry is within seed noise. The frozen protocol reports an advantage on two of three held-out domains and the fine-tuned protocol on none.}
+\caption{RETFound against the ImageNet MAE checkpoint it was initialised from, under two evaluation protocols. Architecture, parameter count, objective, splits, augmentation and schedule are identical; the intervention is the additional retinal-domain MAE pretraining stage that turns that initialisation into RETFound, not dataset identity alone. $\Delta$ is ImageNet-MAE minus RETFound, so a positive value favours the general-purpose initialisation. $\sigma$ is the standard deviation of the paired per-seed differences. Bold marks effects clearing both criteria of Section~\ref{sec:bars}; every other entry is within seed noise. The frozen protocol reports an advantage on two of three held-out domains and the fine-tuned protocol on none.}
 \label{tab:foundation}
 \begin{tabular}{lrrrrrr}
 \toprule

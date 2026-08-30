@@ -28,7 +28,14 @@ bad()  { echo "  FAIL: $*"; fail=1; }
 echo "== escape corruption =="
 # A backslash eaten by an editing layer leaves the command name orphaned at the
 # start of a line. This is cheap to detect and was a real defect here.
-if grep -nE '^(ef|extbf|extit|n|t|label|cite)\{' "$MAIN"; then
+# Two shapes. A consumed backslash at a line start orphans the command name
+# there; mid-line it leaves the tail glued to the previous token, e.g.
+# "Section~ef{...}" from "Section~\ref{...}". The first version of this gate
+# only checked line starts and missed exactly that, twice.
+found=0
+grep -nE '^(ef|extbf|extit|n|t|label|cite|item|emph|num)\{' "$MAIN" && found=1
+grep -nE '[^\r]ef\{|[^\]item\{|[^\t]extbf\{|[^\]emph\{|[^\]num\{' "$MAIN" && found=1
+if [ "$found" -eq 1 ]; then
   bad "orphaned command fragments above (a backslash was consumed)"
 else
   note "none"

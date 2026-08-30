@@ -73,7 +73,8 @@ def main() -> None:
     # The control is selectable because there are two worth running. densenet121
     # asks "do RETFound's features beat a small ImageNet CNN's"; vit_large_mae_in1k
     # asks the sharper question -- same architecture, same scale, same MAE
-    # objective, same lineage, so the retinal corpus is the only variable.
+    # objective, same lineage. The intervention is the extra retinal-domain
+    # MAE stage itself, not merely which images were used.
     global CONTROL
     CONTROL = _take("--control", CONTROL)
     outputs = project_root() / "outputs"

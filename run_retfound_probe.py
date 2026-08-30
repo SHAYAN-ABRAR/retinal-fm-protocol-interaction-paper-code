@@ -18,7 +18,8 @@ Why a linear probe, and why that is not a shortcut
 --------------------------------------------------
 The backbone is frozen and a linear head is trained on cached features. This is
 the standard protocol for evaluating a foundation model's representation --
-RETFound's own paper reports it -- and on 8 GB it is the difference between one
+and it is used in recent retinal foundation-model studies -- and on 8 GB it is
+the difference between one
 hour and thirty. Full fine-tuning of a 304 M ViT needs ~4.9 GB of optimiser
 state before a single activation, which does not leave room for a useful batch.
 

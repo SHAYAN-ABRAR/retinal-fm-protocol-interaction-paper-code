@@ -1,7 +1,9 @@
 # Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
 
 > **Status: Phases 1–13 complete. 328 tests, 2786 audit checks pass.**
-> **278 runs, 119 GPU-hours, 4 backbones, 3 protocols.**
+> **292 executions of 278 distinct configurations — 273 contributing
+> results, 9 superseded, 5 diverged. 119 GPU-hours, 4 backbones,
+> 3 protocols.**
 >
 > Full write-ups in [`docs/`](docs/). Every number below is produced by a script
 > in this repo and verified against `outputs/experiment_registry.csv`, which is
@@ -426,7 +428,8 @@ identical before and after calibration.
 RETFound (ViT-L/16, MAE, ~1.6 M retinal images) against
 `vit_large_patch16_224.mae` — **the checkpoint RETFound's own args name as its
 initialisation**. Same architecture, same 303.3 M parameters, same objective,
-same splits; the pretraining corpus is the only variable.
+same splits. The intervention is the additional retinal-domain MAE pretraining
+stage itself, not dataset identity alone.
 
 **Frozen features, linear probe, 5 seeds**
 ([`docs/PHASE12_FOUNDATION_MODEL.md`](docs/PHASE12_FOUNDATION_MODEL.md)):

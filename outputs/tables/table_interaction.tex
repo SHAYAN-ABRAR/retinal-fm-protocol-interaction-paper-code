@@ -1,0 +1,14 @@
+\begin{table}[t]
+\centering
+\caption{Protocol interaction: the difference of differences $I = (	ext{ImageNet}-	ext{RETFound})_{	ext{partial}} - (	ext{ImageNet}-	ext{RETFound})_{	ext{frozen}}$, over the five seeds common to both protocols. Negative means the general-purpose initialisation's advantage shrinks once the backbone can adapt. Intervals are crossed seed$	imes$case bootstrap; $p$ is a paired $t$-test on the per-seed values with Holm correction across the three domains. The sign-flip column is a distribution-free check whose smallest attainable two-sided value at five seeds is $0.0625$. No domain reaches significance after correction, so a directional interaction is reported but not established.}
+\label{tab:interaction}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Held-out & seeds & $I$ & 95\% CI & sign & $p$ & $p_{\text{Holm}}$ & $p_{\text{flip}}$ \\
+\midrule
+DDR & 5 & $-0.0485$ & $[-0.0844, -0.0139]$ & 5/5 & 0.054 & 0.109 & 0.0625 \\
+APTOS 2019 & 5 & $-0.1003$ & $[-0.1542, -0.0465]$ & 5/5 & 0.022 & 0.065 & 0.0625 \\
+IDRiD & 5 & $+0.0002$ & $[-0.0748, +0.0729]$ & 3/5 & 0.993 & 0.993 & 1.0000 \\
+\bottomrule
+\end{tabular}
+\end{table}

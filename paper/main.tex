@@ -39,13 +39,17 @@ grading these two facts are in tension. We compare RETFound, a ViT-L/16 masked
 autoencoder pretrained on ${\sim}1.6$M retinal images, against
 \emph{the exact ImageNet MAE checkpoint it was initialised from}, holding
 architecture, parameter count, objective, splits and schedule constant so that
-the pretraining corpus is the only variable. As frozen feature extractors the
+the model-level intervention is the additional retinal-domain MAE pretraining
+stage that turns that initialisation into RETFound. As frozen feature extractors the
 general-purpose initialisation transfers better on two of three held-out
 domains ($+0.070$ and $+0.108$ QWK, $2.4\times$ and $2.0\times$ the across-seed
 standard deviation, five seeds). When both models are fine-tuned identically
-the difference disappears: no held-out domain favours the general-purpose
-initialisation, and the smallest domain reverses to favour RETFound with all
-five seeds agreeing. The cheap protocol and
+under identical partial fine-tuning (last 4 of 24 blocks) the advantage is no
+longer statistically detectable on any held-out domain. A direct
+difference-of-differences test of the protocol interaction is negative in
+direction on two of three domains with every seed agreeing, but does not reach
+significance at five seeds after correction; we report that rather than
+inferring interaction from discordant significance. The cheap protocol and
 the deployed protocol therefore rank the same two models differently on the same
 data. We situate this within a broader evaluation of cross-domain DR grading on
 four public datasets under a strict leave-one-domain-out protocol
@@ -82,13 +86,16 @@ initialised from a general-purpose ImageNet MAE ViT-L/16 and trained for a
 further 801 masked-autoencoder epochs on retinal images. That makes an unusually
 clean experiment available: compare RETFound against \emph{the checkpoint it was
 built from}, with architecture, scale, objective, data splits, augmentation,
-optimiser and schedule all held fixed. The pretraining corpus is then the only
-variable.
+optimiser and schedule all held fixed. The model-level intervention is then the
+additional retinal-domain MAE pretraining stage itself --- a training stage, not
+merely a change of dataset.
 
 Under a frozen linear probe, the general-purpose initialisation transfers
-better on two of three held-out domains, by margins that clear both of our
-evidential bars. Under identical fine-tuning of both models, that difference
-disappears entirely. Since linear probing is the standard inexpensive way to
+better on two of three held-out domains. Under identical \emph{partial}
+fine-tuning (last 4 of 24 blocks) of both models, that advantage is no longer
+statistically detectable on any domain. We test the protocol interaction
+directly rather than inferring it from one comparison being significant and the
+other not (Section~\ref{sec:interaction}). Since linear probing is the standard inexpensive way to
 benchmark a foundation model, and fine-tuning is how such models are actually
 deployed, the two protocols support opposite summaries of the same comparison.
 
@@ -96,10 +103,9 @@ deployed, the two protocols support opposite summaries of the same comparison.
 \begin{enumerate}
 \item A matched-initialisation comparison of a domain-specific foundation model
       against its own general-purpose starting point, at two protocol levels
-      (frozen probe and fine-tuning) on three held-out domains.
-\item Evidence that the two protocols disagree, and therefore that
-      probe-based benchmarks of medical foundation models should not be read as
-      predictive of fine-tuned behaviour.
+      (frozen probe and partial fine-tuning) on three held-out domains.
+\item A direct test of the protocol interaction, rather than the common and
+      invalid inference from one comparison being significant and another not.
 \item A leave-one-domain-out evaluation of four domain-generalization
       objectives against ERM on two targets under two batch samplers, with
       diagnostics confirming each method's machinery engaged.
@@ -257,6 +263,39 @@ was initialised from on DDR and APTOS despite fitting the source domains
 equally well. Fine-tuned (right), the difference closes.}
 \label{fig:mechanism}
 \end{figure*}
+
+\subsection{Testing the protocol interaction directly}
+\label{sec:interaction}
+Observing that a difference is significant under one protocol and not under
+another does not establish that the protocols differ; the two estimates can
+straddle a significance boundary while being statistically indistinguishable
+from each other. We therefore test the interaction directly. For each held-out
+domain and each of the five seeds common to both protocols we form
+$D_{\text{frozen}}(s)$ and $D_{\text{partial}}(s)$, the ImageNet-minus-RETFound
+QWK difference under each protocol, and their difference
+$I(s) = D_{\text{partial}}(s) - D_{\text{frozen}}(s)$. Negative $I$ means the
+advantage of the general-purpose initialisation shrinks once the backbone is
+allowed to adapt.
+
+Uncertainty is estimated with the crossed bootstrap, drawing one case sample per
+replicate and applying it to all four conditions so the pairing is preserved.
+Inference uses a paired $t$-test on the five per-seed $I(s)$ values with Holm
+correction across the three domains, reported separately from the interval
+because an ordinary percentile bootstrap resamples around the empirical
+distribution rather than under the null and its tail mass is therefore not a
+calibrated $p$-value. A sign-flip permutation test is reported as a
+distribution-free sensitivity check; with five seeds its smallest attainable
+two-sided value is $2/2^{5} = 0.0625$, so it cannot reach conventional
+significance at this sample size regardless of effect size.
+
+\input{../outputs/tables/table_interaction}
+
+The interaction is negative on DDR and APTOS with every seed agreeing in sign
+and bootstrap intervals excluding zero, and is essentially zero on IDRiD. After
+Holm correction across three domains none reaches $p < 0.05$. We therefore
+report a consistent directional interaction that this seed budget is not
+powered to establish, and explicitly do not claim the protocols have been shown
+to differ. Failure to reject is not evidence of equivalence.
 
 \subsection{Seed variance dominates}
 \label{sec:seeds}

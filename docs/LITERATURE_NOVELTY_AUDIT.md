@@ -75,7 +75,8 @@ Four components, each of which we have checked is not jointly present above:
    `resume='./mae_pretrain_vit_large_full.pth'`, and that exact checkpoint is
    public as `vit_large_patch16_224.mae`. Architecture, parameter count,
    objective and initialisation are therefore identical by construction, and
-   the pretraining corpus is the only variable. No paper in §2 does this.
+   the intervention is the additional retinal-domain MAE pretraining stage
+   itself. No paper in §2 does this.
 2. **Cross-dataset ordinal grading**, 5-class ICDR with QWK and severe-error
    rate, rather than binary detection with AUROC.
 3. **Leave-one-dataset-out** shift across four public cohorts, with the

@@ -111,7 +111,15 @@ def main() -> int:
     # match nothing.
     quoted = set(re.findall(r"(?<![\w.])0\.\d{4}(?![\w])", text))
     supported = {f"{v:.4f}" for _, v, d in checks() if d == 4}
-    unsupported = sorted(quoted - supported)
+    # Values that are arithmetic facts about the design rather than measured
+    # results. Each needs a reason; the point of this check is that a number
+    # with no provenance cannot appear, and "derivable in one line" is
+    # provenance. Anything empirical belongs in a generator table instead.
+    DERIVED_CONSTANTS = {
+        # Smallest attainable two-sided sign-flip p at five seeds: 2 / 2**5.
+        "0.0625",
+    }
+    unsupported = sorted(quoted - supported - DERIVED_CONSTANTS)
     if unsupported:
         print(f"\n!! {len(unsupported)} four-decimal value(s) in the manuscript "
               f"match no generator table:")
