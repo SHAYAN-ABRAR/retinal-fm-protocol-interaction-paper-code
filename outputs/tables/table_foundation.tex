@@ -1,16 +1,16 @@
 \begin{table*}[t]
 \centering
-\caption{RETFound against the ImageNet MAE checkpoint it was initialised from, under two evaluation protocols. Architecture, parameter count, objective, splits, augmentation and schedule are identical; the intervention is the additional retinal-domain MAE pretraining stage that turns that initialisation into RETFound, not dataset identity alone. $\Delta$ is ImageNet-MAE minus RETFound, so a positive value favours the general-purpose initialisation. $\sigma$ is the standard deviation of the paired per-seed differences. Bold marks effects clearing both criteria of Section~\ref{sec:bars}; every other entry is within seed noise. The frozen protocol reports an advantage on two of three held-out domains and the fine-tuned protocol on none.}
+\caption{RETFound against the ImageNet MAE checkpoint it was initialised from, under two adaptation protocols. Architecture, parameter count, objective, splits, augmentation and schedule are identical; the model-level intervention is the additional retinal-domain MAE continuation pretraining that turns that initialisation into RETFound. $\Delta$ is ImageNet-MAE minus RETFound, so a positive value favours the general-purpose initialisation. Intervals are from the crossed seed\timescase bootstrap; $p$ is Holm-corrected across all six comparisons. Bold marks the two results that survive correction. Under partial fine-tuning no held-out domain shows a difference that survives correction, which is not a demonstration of equivalence.}
 \label{tab:foundation}
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrrrrrrr}
 \toprule
-& \multicolumn{3}{c}{Frozen (linear probe)} & \multicolumn{3}{c}{Fine-tuned (last 4 of 24 blocks)} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}
-Held-out domain & seeds & $\Delta$ QWK & $|\Delta|/\sigma$ & seeds & $\Delta$ QWK & $|\Delta|/\sigma$ \\
+& \multicolumn{4}{c}{Frozen (linear probe)} & \multicolumn{4}{c}{Partial fine-tuning (last 4 of 24 blocks)} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+Held-out domain & seeds & $\Delta$ QWK & 95\% CI & $p_{\text{Holm}}$ & seeds & $\Delta$ QWK & 95\% CI & $p_{\text{Holm}}$ \\
 \midrule
-DDR & 10 & $\mathbf{+0.0626}$ & 2.46 & 5 & $+0.0217$ & 0.82 \\
-APTOS 2019 & 10 & $\mathbf{+0.1134}$ & 2.07 & 5 & $+0.0073$ & 0.42 \\
-IDRiD & 10 & $-0.0429$ & 1.25 & 5 & $\mathbf{-0.0423}$ & 1.13 \\
+DDR & 10 & $\mathbf{+0.0626}$ & $[+0.0440, +0.0817]$ & $<$0.001 & 5 & $+0.0217$ & $[+0.0008, +0.0441]$ & 0.172 \\
+APTOS 2019 & 10 & $\mathbf{+0.1134}$ & $[+0.0789, +0.1508]$ & $<$0.001 & 5 & $+0.0073$ & $[-0.0104, +0.0236]$ & 0.398 \\
+IDRiD & 10 & $-0.0429$ & $[-0.0904, +0.0044]$ & 0.222 & 5 & $-0.0423$ & $[-0.0881, +0.0045]$ & 0.222 \\
 \bottomrule
 \end{tabular}
 \end{table*}

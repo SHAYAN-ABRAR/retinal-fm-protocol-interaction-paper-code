@@ -15,8 +15,8 @@
 Every negative result in this project invites one question: *is this a
 small-model artefact?* DenseNet121 is 7 M parameters, ConvNeXt-Tiny 28 M.
 RETFound (Zhou et al., Nature 2023) is a 304 M ViT-L/16 pretrained with a masked
-autoencoder on ~1.6 M retinal images, and is the reference foundation model for
-this modality.
+autoencoder. The colour-fundus checkpoint used here was pretrained on 904,170 colour fundus photographs — 815,468 MEH-MIDAS and 88,702 EyePACS; the ~1.6 M figure often quoted spans the whole RETFound project including
+OCT, and is not the CFP corpus.
 
 ---
 
@@ -57,7 +57,7 @@ it is literally the model RETFound started from.
 | parameters | 303.3 M | 303.3 M ✓ |
 | objective | MAE | MAE ✓ |
 | initialisation | this checkpoint | — |
-| **pretraining corpus** | **+1.6 M retinal** | ImageNet |
+| **pretraining corpus** | **+904,170 CFP** (815,468 MEH-MIDAS, 88,702 EyePACS) | ImageNet |
 
 Everything downstream is identical: same 1024-d features, same per-dimension
 standardisation fitted on source-training only, same linear head, same 200-epoch

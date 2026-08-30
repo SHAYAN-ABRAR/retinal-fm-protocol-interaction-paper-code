@@ -425,7 +425,7 @@ identical before and after calibration.
 
 ## 11f. Foundation model: the protocol decides the answer
 
-RETFound (ViT-L/16, MAE, ~1.6 M retinal images) against
+RETFound (ViT-L/16, MAE, ~904,170 colour fundus photographs) against
 `vit_large_patch16_224.mae` — **the checkpoint RETFound's own args name as its
 initialisation**. Same architecture, same 303.3 M parameters, same objective,
 same splits. The intervention is the additional retinal-domain MAE pretraining

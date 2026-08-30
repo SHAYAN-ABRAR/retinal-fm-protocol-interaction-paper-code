@@ -77,7 +77,7 @@ SUPPORTED_BACKBONES: dict[str, dict[str, Any]] = {
         # The control that makes the RETFound comparison mean anything. This is
         # the checkpoint RETFound was initialised from -- its own args record
         # resume='./mae_pretrain_vit_large_full.pth' -- so RETFound is exactly
-        # this model plus 801 further MAE epochs on 1.6 M retinal images.
+        # this model plus 801 further MAE epochs on 904,170 colour fundus photographs (815,468 MEH-MIDAS, 88,702 EyePACS) -- retinal images.
         # Same architecture, same scale, same objective, same lineage: the only
         # variable left is the pretraining corpus. Comparing RETFound against
         # DenseNet121 instead confounds corpus with architecture and scale.

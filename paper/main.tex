@@ -33,36 +33,29 @@ generator scripts: \url{https://github.com/SHAYAN-ABRAR/Paper-Code}}}
 % ---------------------------------------------------------------- abstract
 \begin{abstract}
 Domain-specific foundation models are increasingly the default starting point
-for medical imaging, and linear probing is the standard cheap protocol for
-benchmarking them. We show that for cross-domain diabetic retinopathy (DR)
-grading these two facts are in tension. We compare RETFound, a ViT-L/16 masked
-autoencoder pretrained on ${\sim}1.6$M retinal images, against
-\emph{the exact ImageNet MAE checkpoint it was initialised from}, holding
-architecture, parameter count, objective, splits and schedule constant so that
-the model-level intervention is the additional retinal-domain MAE pretraining
-stage that turns that initialisation into RETFound. As frozen feature extractors the
-general-purpose initialisation transfers better on two of three held-out
-domains ($+0.070$ and $+0.108$ QWK, $2.4\times$ and $2.0\times$ the across-seed
-standard deviation, five seeds). When both models are fine-tuned identically
-under identical partial fine-tuning (last 4 of 24 blocks) the advantage is no
-longer statistically detectable on any held-out domain. A direct
-difference-of-differences test of the protocol interaction is negative in
-direction on two of three domains with every seed agreeing, but does not reach
-significance at five seeds after correction; we report that rather than
-inferring interaction from discordant significance. The point estimates therefore show substantial attenuation of the
-ImageNet-MAE advantage after partial fine-tuning on DDR and APTOS, but a direct
-test of the protocol interaction does not reach multiplicity-adjusted
-significance at the current five-seed budget. We report that limit rather than
-inferring an interaction from discordant significance, and we do not claim the
-protocols have been shown to be equivalent either. We situate this within a broader evaluation of cross-domain DR grading on
-four public datasets under a strict leave-one-domain-out protocol
-(\num{278} training runs): no domain-generalization objective beats empirical
-risk minimisation on either target tested, A configuration change from 224\,px at batch 32 to 512\,px at batch 16 improves
-held-out QWK by up to $0.097$, but that comparison alters resolution and batch
-size together and we do not currently separate them. Across the study, three separate effects were statistically
-significant under a paired bootstrap at three seeds and vanished at five. We
-argue that seed-level variance, not test-set sampling variance, is the binding
-uncertainty in this problem, and report every claim against both.
+for medical imaging, and linear probing is a common, computationally
+inexpensive protocol for evaluating their representations. We ask whether that
+protocol predicts what happens when the same models are adapted by
+fine-tuning. We compare RETFound, a ViT-L/16 masked autoencoder whose
+colour-fundus corpus is 904{,}170 photographs, against \emph{the exact ImageNet MAE checkpoint from
+which it was initialised}. Architecture, objective, splits and schedule are held fixed, so the
+intervention is the additional retinal-domain MAE continuation pretraining
+itself. Under a frozen linear probe over
+\num{10} seeds, the general-purpose initialisation transfers
+better on two of three held-out domains ($+0.0626$ and
+$+0.1134$ QWK, both $p<0.001$ after Holm correction). Under
+identical partial fine-tuning of the last 4 of 24 transformer blocks, no
+held-out domain shows a difference surviving correction. Testing the protocol
+interaction directly on the \num{5} seeds common to both
+protocols, the point estimates show substantial attenuation of the
+ImageNet-MAE advantage on two domains with every seed agreeing in sign, but
+the interaction does not reach multiplicity-adjusted significance at this seed
+budget, and we do not claim the protocols are equivalent. In a
+leave-one-domain-out evaluation on four public datasets, no
+domain-generalization objective beat empirical risk minimisation, and three
+separate effects were significant under a within-seed bootstrap at three
+seeds and vanished at five. We argue that seed-level variance, not
+test-set sampling variance, is the binding uncertainty in this problem.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -98,9 +91,11 @@ better on two of three held-out domains. Under identical \emph{partial}
 fine-tuning (last 4 of 24 blocks) of both models, that advantage is no longer
 statistically detectable on any domain. We test the protocol interaction
 directly rather than inferring it from one comparison being significant and the
-other not (Section~\ref{sec:interaction}). Since linear probing is the standard inexpensive way to
-benchmark a foundation model, and fine-tuning is how such models are actually
-deployed, the two protocols support opposite summaries of the same comparison.
+other not (Section~\ref{sec:interaction}). Linear probing is a common, computationally inexpensive way to evaluate a
+foundation model's representation, while fine-tuning is how such models are
+typically adapted in practice; the two protocols therefore support different
+readings of the same comparison, although the interaction itself is not
+established at this seed budget.
 
 \textbf{Contributions.}
 \begin{enumerate}
@@ -139,7 +134,8 @@ images from the smallest domain. We address this with a domain-balanced sampler
 and an ERM control on that same sampler.
 
 \textbf{Medical foundation models.} RETFound \cite{zhou2023retfound} applies
-masked autoencoding \cite{he2022mae} to ${\sim}1.6$M retinal images and is the
+masked autoencoding \cite{he2022mae} to retinal images; the colour-fundus
+checkpoint used here was pretrained on 904{,}170 photographs and is the
 reference self-supervised initialisation for colour fundus photography.
 Evaluations of such models commonly report linear-probe performance, since
 probing is cheap and isolates representation quality from fine-tuning
@@ -169,22 +165,41 @@ training, validation, early stopping, model selection and temperature fitting.
 This is asserted in code rather than left to convention. Splits are
 patient-level where patient identifiers exist.
 
-\subsection{Two bars for every claim}
+\subsection{Statistical framework}
 \label{sec:bars}
-An effect is reported as established only if it satisfies both:
-\begin{enumerate}
-\item $|\Delta| >$ the standard deviation of the paired per-seed differences
-      (seed $s$ of one configuration differenced against seed $s$ of the
-      other); and
-\item its paired bootstrap confidence interval excludes zero.
-\end{enumerate}
-The second criterion alone is standard and, in this problem, insufficient. A
-paired bootstrap resamples \emph{images within one seed}; it correctly answers
-``did this model beat that model on this test set'', and is structurally blind
-to the fact that a different random seed produces a different model. Three
-separate effects in this study cleared the bootstrap at three seeds --- two of
-them at $p<0.001$ --- and fell below the seed-variance bar when two further
-seeds were added (Section~\ref{sec:seeds}, Fig.~\ref{fig:seeds}).
+Two sources of uncertainty act on every comparison, and reporting either
+alone is misleading here. Test-set sampling variance is what a conventional
+paired bootstrap measures. Seed variance --- the fact that a different random
+seed produces a different trained model --- is invisible to it, and in this
+problem it is frequently the larger of the two.
+
+\textbf{Uncertainty} is estimated with a crossed seed$\times$case
+bootstrap. Because every seed is evaluated on the same test set, seeds and
+cases are crossed rather than nested: each replicate resamples seeds with
+replacement, draws \emph{one} case sample, and applies those same case indices
+to every selected seed and to both models, preserving the pairing that gives
+the design its power. Non-linear metrics are recomputed per seed and model on
+the resampled cases rather than averaged from per-case values.
+
+\textbf{Inference} is a paired test on the per-seed differences, with
+Holm--Bonferroni correction across the pre-specified hypothesis family. This
+is kept separate from the interval deliberately: an ordinary percentile
+bootstrap resamples around the empirical distribution rather than under the
+null, so its tail mass is not a calibrated $p$-value and is not reported as
+one. An exact sign-flip permutation test is reported as a distribution-free
+sensitivity check.
+
+\textbf{Seed dispersion} --- the standard deviation of the paired per-seed
+differences, and the number of seeds agreeing in sign --- is reported
+throughout as a \emph{descriptive robustness diagnostic}. It is not a
+significance criterion. An earlier version of this work used a
+$|\Delta| >$ seed-SD threshold as an inferential rule; it has no
+calibrated error rate and is retained only for description.
+
+The need for the seed level is not hypothetical. Three separate effects in
+this study cleared a within-seed paired bootstrap at three seeds --- two at
+$p<0.001$ --- and disappeared when two further seeds were added
+(Section~\ref{sec:seeds}, Fig.~\ref{fig:seeds}).
 
 % ---------------------------------------------------------------- methods
 \section{Methods}

@@ -1,7 +1,8 @@
 """Loading RETFound (Zhou et al., Nature 2023) as a frozen feature extractor.
 
-RETFound is a ViT-Large/16 pretrained with a masked autoencoder on ~1.6 M
-retinal images. It is included here to answer the obvious question about every
+RETFound is a ViT-Large/16 pretrained with a masked autoencoder. The
+colour-fundus checkpoint used here was pretrained on 904,170 colour fundus photographs (815,468 MEH-MIDAS, 88,702 EyePACS).
+The ~1.6 M figure often quoted spans the whole RETFound project, OCT included. It is included here to answer the obvious question about every
 finding in this project: *is this a small-model artefact?* DenseNet121 is 7 M
 parameters and ConvNeXt-Tiny 28 M; RETFound is 304 M and was pretrained on
 retina specifically.

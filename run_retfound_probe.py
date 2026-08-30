@@ -2,8 +2,9 @@
 
 Answers the question every reviewer will ask of this project's negative results:
 *is this a small-model artefact?* DenseNet121 is 7 M parameters, ConvNeXt-Tiny
-28 M; RETFound is a 304 M ViT-L/16 pretrained with a masked autoencoder on ~1.6 M
-retinal images. If a retinal foundation model also fails to close the
+28 M; RETFound is a 304 M ViT-L/16 pretrained with a masked autoencoder. The
+colour-fundus checkpoint used here was pretrained on 904,170 colour fundus photographs (815,468 MEH-MIDAS, 88,702 EyePACS); the
+often-quoted ~1.6 M figure spans the whole RETFound project including OCT. If a retinal foundation model also fails to close the
 calibration gap, "the problem is the domain shift, not the network" stops being
 a claim about two small CNNs.
 
