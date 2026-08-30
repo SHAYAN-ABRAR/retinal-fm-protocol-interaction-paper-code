@@ -36,6 +36,11 @@ import sys
 sys.path.insert(0, ".")
 
 BACKBONE = "densenet121"
+# The reference input configuration for every result in the paper. The Q1
+# batch-size controls put a second 224 px configuration in lodo_results.csv --
+# ERM at batch 16, same method, backbone and sampler -- so this table no longer
+# has one row per (target, seed) at 224 px.
+REFERENCE_BATCH_SIZE = 32
 BATCH_SIZE = 32
 ALL_TARGETS = ["ddr", "aptos", "idrid", "eyepacs"]
 METRICS = ["target_qwk", "target_f1", "target_ece", "target_ece_scaled", "target_severe"]
@@ -124,6 +129,13 @@ def main() -> None:
     # written before the column existed are DenseNet121.
     if "backbone" in frame.columns:
         frame = frame[frame["backbone"] == BACKBONE]
+    # Third column of the same kind, after sampler and backbone. Pooling batch
+    # 16 with batch 32 reports the spread between two configurations as seed
+    # noise: IDRiD's across-seed SD went from 0.0244 to 0.0348 that way, and
+    # EyePACS's from 0.0081 to 0.0121.
+    if "batch_size" in frame.columns:
+        frame = frame[frame["batch_size"].fillna(REFERENCE_BATCH_SIZE)
+                      .astype(int) == REFERENCE_BATCH_SIZE]
     seeds = (
         [int(s) for s in seed_argument.split(",")] if seed_argument
         else sorted(frame["seed"].unique().tolist())

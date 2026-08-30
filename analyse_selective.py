@@ -37,6 +37,8 @@ import sys
 sys.path.insert(0, ".")
 
 BACKBONE = "densenet121"
+# The reference input configuration for every result in the paper.
+REFERENCE_BATCH_SIZE = 32
 BATCH_SIZE = 32
 ALL_TARGETS = ["ddr", "aptos", "idrid", "eyepacs"]
 COVERAGES = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]
@@ -91,6 +93,11 @@ def main() -> None:
     # written before the column existed are DenseNet121.
     if "backbone" in frame.columns:
         frame = frame[frame["backbone"] == BACKBONE]
+    # Third column of the same kind, after sampler and backbone: the Q1
+    # batch-size controls are a second 224 px ERM configuration.
+    if "batch_size" in frame.columns:
+        frame = frame[frame["batch_size"].fillna(REFERENCE_BATCH_SIZE)
+                      .astype(int) == REFERENCE_BATCH_SIZE]
     seeds = (
         [int(s) for s in seed_argument.split(",")] if seed_argument
         else sorted(frame["seed"].unique().tolist())

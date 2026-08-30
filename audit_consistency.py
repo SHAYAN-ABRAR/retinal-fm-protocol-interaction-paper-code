@@ -219,9 +219,15 @@ def specifications():
             # audited against linear_probe_results.csv instead.
             "scope": lambda r: (n_sources(r) == 3 and not is_subsample(r)
                                 and not is_linear_probe(r)),
+            # batch_size is a key for the same reason domain_balanced is: it
+            # appears in the experiment id but not in the row's "method"
+            # column, so the Q1 batch-16 controls and the batch-32 runs are
+            # indistinguishable by the other fields. It has to match the key
+            # run_lodo.py merges on, or the audit calls a legitimate pair of
+            # rows a duplicate.
             "key": ["target", "method", "seed", "backbone", "image_size",
-                    "domain_balanced", "irm_anneal_iters", "trainable_blocks",
-                    "learning_rate"],
+                    "batch_size", "domain_balanced", "irm_anneal_iters",
+                    "trainable_blocks", "learning_rate"],
             "experiment_id": lodo_id,
             "target_of": lambda row: row["target"],
             # table column -> registry column

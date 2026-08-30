@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\caption{Decomposition of the 224\,px / 512\,px comparison. Every 512\,px run in this study used batch 16, because 512\,px at batch 32 does not fit in 8\,GB of VRAM, so resolution and batch size moved together and the effect reported previously was a configuration effect. Adding the missing 224\,px/batch-16 cell separates them: the batch contrast holds resolution fixed, the resolution contrast holds batch fixed, and the combined contrast is the original comparison. Intervals are from the crossed seed $\times$ case bootstrap; $p_{\text{Holm}}$ is corrected within each contrast across held-out domains, not across contrasts, because the combined contrast is the sum of the other two and is not an independent hypothesis. Positive favours the second configuration.}
+\label{tab:configuration}
+\begin{tabular}{llrrrrrr}
+\toprule
+Contrast & Held-out & seeds & $\Delta$ QWK & 95\% CI & seed SD & sign & $p_{\text{Holm}}$ \\
+\midrule
+Batch (224/32 $\to$ 224/16) & EyePACS & 3 & $+0.0103$ & $[-0.0140, +0.0299]$ & 0.0230 & 2/3 & 0.408 \\
+ & IDRiD & 3 & $+0.0459$ & $[-0.0027, +0.0974]$ & 0.0424 & 3/3 & 0.122 \\
+\addlinespace
+Resolution (224/16 $\to$ 512/16) & EyePACS & 3 & $+0.0865$ & $[+0.0686, +0.1036]$ & 0.0184 & 3/3 & 0.000 \\
+ & IDRiD & 3 & $+0.0421$ & $[+0.0052, +0.0807]$ & 0.0231 & 3/3 & 0.022 \\
+\addlinespace
+Combined (224/32 $\to$ 512/16) & EyePACS & 3 & $+0.0967$ & $[+0.0802, +0.1190]$ & 0.0201 & 3/3 & 0.000 \\
+ & IDRiD & 3 & $+0.0880$ & $[+0.0476, +0.1376]$ & 0.0260 & 3/3 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}

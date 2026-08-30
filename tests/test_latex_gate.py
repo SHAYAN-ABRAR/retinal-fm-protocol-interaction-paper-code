@@ -1,4 +1,4 @@
-"""The LaTeX gate must inspect included files, not just main.tex.
+r"""The LaTeX gate must inspect included files, not just main.tex.
 
 A real defect got through the previous bash gate: table_interaction.tex, pulled
 in by \input, had every \text{...} in its caption replaced by a literal TAB
@@ -34,12 +34,60 @@ def _doc(tmp_path: Path, main_body: str, included: str | None = None) -> Path:
 
 
 def test_clean_document_passes(tmp_path):
-    main = _doc(tmp_path,
-                BS + "input{tables/gen}\n",
-                BS + "caption{" + BS + "text{ok} and " + BS + "times}\n")
+    # Both commands are math-only, so both are delimited. Written bare -- as
+    # this fixture originally was -- they are a compile error, not a clean
+    # document, and the gate is now strict enough to say so.
+    body = (BS + "caption{$" + BS + "text{ok}$ and $" + BS + "times$}\n")
+    main = _doc(tmp_path, BS + "input{tables/gen}\n", body)
     assert check_latex.check(main) == []
     included = tmp_path / "tables" / "gen.tex"
     assert check_latex.check(included) == []
+
+
+def test_a_concatenated_command_is_rejected(tmp_path):
+    """The defect that shipped in three tables at once.
+
+    Building a caption as "seed" + BS + "times" + "case" yields \\timescase:
+    one well-formed, undefined token. The backslash is present and the line
+    starts with a real word, so neither the control-character check nor the
+    orphan check can see it. Only a closed list of valid names catches it.
+    """
+    body = BS + "caption{crossed seed" + BS + "times" + "case bootstrap}\n"
+    main = _doc(tmp_path, BS + "input{tables/gen}\n", body)
+    problems = check_latex.check(tmp_path / "tables" / "gen.tex")
+    assert any("timescase" in p for p in problems), problems
+    assert any("unknown command" in p for p in problems), problems
+
+
+def test_a_math_only_command_in_text_mode_is_rejected(tmp_path):
+    """An arrow in a tabular cell throws 'Missing $ inserted'."""
+    body = "Batch (224/32 " + BS + "to 224/16) & 1 " + BS + BS + "\n"
+    main = _doc(tmp_path, BS + "input{tables/gen}\n", body)
+    problems = check_latex.check(tmp_path / "tables" / "gen.tex")
+    assert any("math-only" in p for p in problems), problems
+
+
+def test_math_mode_use_of_the_same_command_is_accepted(tmp_path):
+    """The check must not fire on the correct form, or it will be turned off."""
+    body = "Batch (224/32 $" + BS + "to$ 224/16) & 1 " + BS + BS + "\n"
+    main = _doc(tmp_path, BS + "input{tables/gen}\n", body)
+    assert check_latex.check(tmp_path / "tables" / "gen.tex") == []
+
+
+def test_every_generated_table_is_discovered(tmp_path):
+    """Tables are written some commits before the \\input that pulls them in.
+
+    A gate that walks only main.tex reports success on a table that is already
+    broken, which is how the unwired table_configuration.tex went unchecked.
+    """
+    root = Path(check_latex.__file__).resolve().parents[1]
+    generated = sorted((root / "outputs" / "tables").glob("*.tex"))
+    if not generated:
+        import pytest as _pytest
+        _pytest.skip("no generated tables in this checkout")
+    discovered = {p.resolve() for p in check_latex.discover(root)}
+    for table in generated:
+        assert table.resolve() in discovered, f"{table.name} is not gated"
 
 
 def test_a_tab_inside_an_included_table_is_rejected(tmp_path):

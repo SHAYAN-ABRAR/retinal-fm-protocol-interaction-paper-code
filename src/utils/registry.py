@@ -161,6 +161,11 @@ KEY_COLUMN_DEFAULTS: dict[str, object] = {
     # whole network at 3e-4.
     "trainable_blocks": -1,          # -1 encodes "all blocks"; NaN is not a key
     "learning_rate": 3e-4,
+    # Every 224 px run before the Q1 batch-size controls used batch 32. The
+    # column has always been written, so this only matters for a table old
+    # enough to predate it -- but batch_size is a key now, and a key column that
+    # can be blank is the bug this dictionary exists to prevent.
+    "batch_size": 32,
 }
 
 

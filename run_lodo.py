@@ -91,6 +91,24 @@ def adaptation_mode() -> str:
     return f"partial_finetune_{TRAINABLE_BLOCKS}"
 
 
+def recorded_trainable_blocks() -> int:
+    """-1 for the whole network, never None.
+
+    ``trainable_blocks`` is part of the dedup key in both the registry and the
+    results table, and NaN never equals NaN. Two runs differing only in a key
+    column that is blank therefore merge into one row, and the second silently
+    replaces the first -- the same failure that already cost this project three
+    results under ``-dbal``, ``-a1170`` and ``-tb4-lr0.0001``.
+
+    ``KEY_COLUMN_DEFAULTS`` states the convention ("-1 encodes all blocks; NaN
+    is not a key") and backfills historical rows, but new full-network runs were
+    still writing None, so the backfill was papering over a live source of NaN
+    rather than a purely historical one. The Q1 batch-size controls wrote four
+    such rows before this was caught.
+    """
+    return -1 if TRAINABLE_BLOCKS is None else TRAINABLE_BLOCKS
+
+
 def assert_full_finetune(model) -> tuple[int, int]:
     """Refuse to call a run 'full fine-tuning' unless everything trains.
 
@@ -314,7 +332,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         # adaptation_mode is the human-readable form and exists so a reader
         # never has to infer the protocol from a block count.
         "adaptation_mode": adaptation_mode(),
-        "trainable_blocks": TRAINABLE_BLOCKS,
+        "trainable_blocks": recorded_trainable_blocks(),
         "gradient_checkpointing": GRADIENT_CHECKPOINTING,
         "params_total_m": round(total / 1e6, 2),
         "params_trainable_m": round(trainable / 1e6, 2),
@@ -362,7 +380,7 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         # Same reason as irm_anneal_iters: the row's "method" column holds "erm",
         # so partial fine-tuning and a non-default rate are invisible here, and
         # the audit rebuilds erm-b16 for an erm-b16-tb4-lr0.0001 row.
-        "trainable_blocks": TRAINABLE_BLOCKS,
+        "trainable_blocks": recorded_trainable_blocks(),
         "learning_rate": LEARNING_RATE,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
@@ -483,9 +501,19 @@ def main() -> None:
                 # irm_anneal_iters joins the key for the same reason: two IRM
                 # runs differing only in the anneal are one row otherwise, and
                 # the second silently replaces the first.
+                # batch_size joins the key for the fourth instance of this same
+                # bug. The Q1 controls train ERM at 224 px with batch 16 against
+                # the existing batch 32 runs; with batch_size absent from the
+                # key the two are one row, and the b16 runs silently replaced
+                # the b32 rows for eyepacs 42/1/2 and idrid 42. The -dbal rows
+                # survived only because domain_balanced happens to be a key.
+                # Nothing was lost -- the registry is append-only and the
+                # predictions and reports are filed under the full experiment
+                # id, which carries the batch tag -- but the summary table is
+                # what the paper's generators read, so it must not be lossy.
                 ["target", "method", "seed", "backbone", "image_size",
-                 "domain_balanced", "irm_anneal_iters", "trainable_blocks",
-                 "learning_rate"],
+                 "batch_size", "domain_balanced", "irm_anneal_iters",
+                 "trainable_blocks", "learning_rate"],
             )
             frame = frame.sort_values(
                 ["backbone", "seed", "target"]).reset_index(drop=True)

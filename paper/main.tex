@@ -358,15 +358,33 @@ across targets. A modern architecture at comparable cost (ConvNeXt-Tiny) is
 second at $+0.0554$ ($4.1\times$). Every domain-generalization objective, and
 domain-specific pretraining under partial fine-tuning, are within seed noise.
 
-\textbf{This is not yet a resolution effect.} The two configurations differ in
+\textbf{Decomposing the configuration.} The two configurations differ in
 resolution \emph{and} batch size, because 512\,px at batch 32 does not fit the
-8\,GB budget these experiments were run under. Attributing the gain to
-resolution alone would require a 224\,px/batch-16 control, which we have not
-run. We therefore report it as a configuration effect and separate the two
-factors in future work; the decomposition requires
-224/32 vs 224/16 (batch), 224/16 vs 512/16 (resolution) and 224/32 vs 512/16
-(combined). \todo{restore the resolution-specific claim once the 224/b16
-control is complete}
+8\,GB budget these experiments were run under. We therefore ran the missing
+224\,px/batch-16 cell, which splits the change into a batch contrast
+(224/32 to 224/16, resolution held) and a resolution contrast
+(224/16 to 512/16, batch held). Table~\ref{tab:configuration} gives both, on
+the two held-out domains that have a 512\,px arm and over the three seeds
+common to all three configurations.
+
+The two domains do not answer alike. On EyePACS the batch contrast is
+$+0.0103$ QWK, smaller than its own across-seed SD and not even consistent in
+sign across seeds, while the resolution contrast is $+0.0865$ --- nearly
+nine-tenths of the combined $+0.0967$. On IDRiD the split is closer to even:
+$+0.0459$ from batch and $+0.0421$ from resolution. The resolution contrast
+survives Holm correction on both domains; the batch contrast survives on
+neither, though its IDRiD estimate moves all three seeds in the same direction
+and is better read as underpowered than as absent.
+
+We therefore report resolution as the dominant term on EyePACS and as about
+half the effect on IDRiD, and quote the batch-controlled estimates rather than
+the confounded ones. Two limits remain. Three seeds is a coarse basis for the
+seed-level resample, so these intervals are honest about seed uncertainty
+without being precise about it. And the in-domain 512\,px runs have no
+224\,px/batch-16 counterpart, so in-domain resolution is still a configuration
+effect and is reported as one.
+
+\input{../outputs/tables/table_configuration}
 
 \begin{figure}[t]
 \centering

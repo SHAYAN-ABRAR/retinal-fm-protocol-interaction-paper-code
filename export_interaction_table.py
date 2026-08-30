@@ -21,6 +21,10 @@ import sys
 sys.path.insert(0, ".")
 
 BS = chr(92)
+# Math-mode, and delimited. Unwrapped it is an error in a text-mode caption;
+# undelimited the following letters are swallowed into the command name, which
+# is how this caption shipped an undefined \timescase.
+TIMES = "$" + BS + "times$"
 NL = BS + BS
 LABELS = {"ddr": "DDR", "aptos": "APTOS 2019", "idrid": "IDRiD"}
 SOURCE = "protocol_interaction.csv"
@@ -64,7 +68,7 @@ def main() -> None:
         + ", over the five seeds common to both protocols. Negative means the "
         "advantage of the general-purpose initialisation is attenuated once the "
         "backbone can adapt. Intervals are from the crossed seed"
-        + BS + "times" + "case bootstrap and quantify uncertainty; $p$ is a "
+        + " " + TIMES + " case bootstrap and quantify uncertainty; $p$ is a "
         "paired $t$-test on the per-seed values, Holm-corrected across the "
         "three held-out domains. The final column is an exact sign-flip "
         "permutation check, whose smallest attainable two-sided value at five "

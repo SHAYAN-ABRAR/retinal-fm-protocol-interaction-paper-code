@@ -186,3 +186,56 @@ def test_latest_per_experiment_resolves_a_rerun() -> None:
     assert current.set_index("experiment_id").loc["a", "epochs_run"].ndim == 0
     with pytest.raises(ValueError, match="ambiguous"):
         bool(pd.isna(log.set_index("experiment_id").loc["a", "epochs_run"]))
+
+
+# --- batch size ------------------------------------------------------------
+# The fourth instance of the overwrite bug, and the first caught by the audit
+# rather than by reading the code. The Q1 controls run ERM at 224 px with batch
+# 16 against the existing batch 32 runs. The summary row's "method" column holds
+# "erm", not the tag "erm-b16", so without batch_size in the key the two runs
+# are one row and the newer silently replaced the older.
+
+BATCH_KEY = ["target", "method", "seed", "image_size", "batch_size"]
+
+
+def _batch_row(target="eyepacs", batch=32, qwk=0.4128, seed=42):
+    # Not _lodo_row: that name is already taken above, and shadowing it at
+    # module level silently rewires the four backbone tests to this helper.
+    return pd.DataFrame([{"target": target, "method": "erm", "seed": seed,
+                          "image_size": 224, "batch_size": batch,
+                          "target_qwk": qwk}])
+
+
+def test_a_different_batch_size_does_not_overwrite() -> None:
+    merged = merge_results_table(_batch_row(batch=32, qwk=0.4128),
+                                 _batch_row(batch=16, qwk=0.4381), BATCH_KEY)
+    assert len(merged) == 2
+    assert sorted(merged["target_qwk"]) == [0.4128, 0.4381]
+
+
+def test_the_same_batch_size_still_supersedes() -> None:
+    merged = merge_results_table(_batch_row(batch=32, qwk=0.4128),
+                                 _batch_row(batch=32, qwk=0.4200), BATCH_KEY)
+    assert len(merged) == 1
+    assert merged["target_qwk"].iloc[0] == 0.4200
+
+
+def test_a_blank_batch_size_is_backfilled_to_32_not_treated_as_new() -> None:
+    """A table predating the column must not gain a phantom second row."""
+    legacy = _batch_row(batch=32).drop(columns=["batch_size"])
+    merged = merge_results_table(legacy, _batch_row(batch=32, qwk=0.4200),
+                                 BATCH_KEY)
+    assert len(merged) == 1, "blank batch_size was read as a distinct setting"
+    assert merged["target_qwk"].iloc[0] == 0.4200
+
+
+def test_run_lodo_keeps_batch_size_in_its_results_key() -> None:
+    """The key lives in run_lodo.py; assert the fix is actually wired in."""
+    from pathlib import Path
+
+    source = Path("run_lodo.py").read_text(encoding="utf-8")
+    start = source.index('"target", "method", "seed", "backbone"')
+    key_text = source[start:start + 260]
+    for column in ("batch_size", "domain_balanced", "trainable_blocks",
+                   "learning_rate", "image_size", "irm_anneal_iters"):
+        assert f'"{column}"' in key_text, f"{column} missing from the results key"

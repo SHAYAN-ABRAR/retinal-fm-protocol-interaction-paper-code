@@ -26,6 +26,9 @@ LABELS = {"ddr": "DDR", "aptos": "APTOS 2019", "idrid": "IDRiD", "eyepacs": "Eye
 # robustness check and must never be pooled with it: mixing architectures turns
 # an across-seed SD into an across-architecture SD.
 MAIN_BACKBONE = "densenet121"
+# The reference input configuration for every result in the paper. The Q1
+# batch-size controls added a second 224 px configuration to lodo_results.csv.
+REFERENCE_BATCH_SIZE = 32
 MAIN_IMAGE_SIZE = 224
 
 
@@ -73,6 +76,12 @@ def main() -> None:
         # 0.7383 +/- 0.0055.
         if "backbone" in frame.columns:
             frame = frame[frame["backbone"] == MAIN_BACKBONE]
+        # Third column of the same kind, after sampler and backbone. Without it
+        # the batch-16 Q1 controls join the batch-32 seeds and this table
+        # reported IDRiD as 0.7643 +/- 0.0348 instead of 0.7413 +/- 0.0244.
+        if "batch_size" in frame.columns:
+            frame = frame[frame["batch_size"].fillna(REFERENCE_BATCH_SIZE)
+                          .astype(int) == REFERENCE_BATCH_SIZE]
         n_seeds = frame["seed"].nunique()
         rows = []
         for target in ALL_TARGETS:

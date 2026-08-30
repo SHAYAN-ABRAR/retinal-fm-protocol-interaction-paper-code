@@ -74,6 +74,15 @@ def checks():
             out.append((f"{tag} ci_lo", abs(r["ci_lower"]), 4))
             out.append((f"{tag} ci_hi", abs(r["ci_upper"]), 4))
 
+    # The Q1 configuration decomposition. Every value the resolution section
+    # quotes comes from here; without this entry those six deltas would read as
+    # unsupported four-decimal numbers, which is exactly the check working.
+    config = _table("configuration_decomposition.csv")
+    if config is not None:
+        for _, r in config[config.metric == "qwk"].iterrows():
+            out.append((f"{r['contrast']} {r['target']} delta",
+                        abs(r["delta"]), 4))
+
     back = _table("backbone_comparison.csv")
     if back is not None:
         ey = back[back.target == "eyepacs"]

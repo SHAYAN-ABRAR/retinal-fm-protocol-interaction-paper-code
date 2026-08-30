@@ -26,6 +26,10 @@ TARGETS = ["ddr", "aptos", "idrid"]
 
 BS = "\\"          # keeps the f-strings below readable
 NL = BS + BS       # LaTeX row terminator
+# Math-mode, and delimited. Unwrapped it is an error in a text-mode caption;
+# undelimited the following letters are swallowed into the command name, which
+# is how this caption shipped an undefined \timescase.
+TIMES = "$" + BS + "times$"
 LF = chr(10)       # real newline, built this way because writing a literal
                    # escape here has been flattened by an editing layer twice
 
@@ -91,7 +95,7 @@ def foundation_table(tables):
         "continuation pretraining that turns that initialisation into RETFound. "
         "$" + BS + "Delta$ is ImageNet-MAE minus RETFound, so a positive value "
         "favours the general-purpose initialisation. Intervals are from the "
-        "crossed seed" + BS + "times" + "case bootstrap; $p$ is Holm-corrected "
+        "crossed seed " + TIMES + " case bootstrap; $p$ is Holm-corrected "
         "across all six comparisons. Bold marks the two results that survive "
         "correction. Under partial fine-tuning no held-out domain shows a "
         "difference that survives correction, which is not a demonstration of "

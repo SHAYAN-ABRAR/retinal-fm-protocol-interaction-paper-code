@@ -34,10 +34,14 @@
 >   diagnostics proving the machinery engaged (0% degenerate batches under
 >   balanced sampling). Phases [10](docs/PHASE10_DG_METHOD_COMPARISON.md) and
 >   [11](docs/PHASE11_DDR_REPLICATION.md).
-> - **Input resolution beats every method and every backbone.** 224→512 px is
->   +0.0967 QWK on EyePACS and cuts severe errors 22–48% — larger than any DG
->   method, any architecture change, or 4× the training data.
->   Phase [9](docs/PHASE9_RESOLUTION_REPORT.md).
+> - **Input resolution beats every method and every backbone**, and the
+>   batch-size confound has now been controlled. 224→512 px is +0.0967 QWK on
+>   EyePACS combined; with batch held at 16 the resolution term alone is
+>   **+0.0865 on EyePACS** and **+0.0421 on IDRiD**, both surviving Holm
+>   correction. The batch term survives on neither, though on IDRiD it accounts
+>   for about half the combined effect and is underpowered rather than absent.
+>   Still larger than any DG method, any architecture change, or 4× the training
+>   data. Phase [9](docs/PHASE9_RESOLUTION_REPORT.md).
 > - **Cross-domain deployment costs 0.138 QWK on DDR and 0.291 on EyePACS**,
 >   measured against in-domain models on identical images, with severe errors
 >   up 107% and 155%.
