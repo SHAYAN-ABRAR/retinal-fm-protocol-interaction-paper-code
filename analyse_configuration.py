@@ -103,6 +103,7 @@ def main() -> None:
     from src.evaluation.bootstrap import METRIC_FUNCTIONS
     from src.evaluation.crossed_bootstrap import (crossed_bootstrap_difference,
                                                   holm_adjust)
+    from src.evaluation.seed_inference import seed_level_test
     from src.utils.io import project_root
     from src.visualization.calibration_figures import load_target_predictions
 
@@ -221,11 +222,20 @@ def main() -> None:
                     "delta": result["difference"],
                     "ci_lower": result["ci_lower"],
                     "ci_upper": result["ci_upper"],
-                    "p_value": result["p_value"],
                     "seed_sd": result["seed_sd"],
                     "sign_agreement": result["sign_agreement"],
                     "exceeds_seed_sd": result["exceeds_seed_sd"],
                 }
+                # Formal inference on the per-seed effects, not on the
+                # bootstrap's tail mass. See src/evaluation/seed_inference.py.
+                inference = seed_level_test(
+                    list(result["per_seed_difference"].values()))
+                record.update({
+                    "t_stat": inference["t_stat"],
+                    "p_ttest": inference["p_ttest"],
+                    "p_signflip": inference["p_signflip"],
+                    "min_attainable_signflip_p": inference["min_attainable_p"],
+                })
                 for seed, value in result["per_seed_difference"].items():
                     record[f"delta_seed{seed}"] = value
                 records.append(record)
@@ -236,12 +246,13 @@ def main() -> None:
 
     frame = pd.DataFrame(records)
 
-    # Holm within each (contrast, metric) across held-out domains. Not across
-    # contrasts: see the module docstring.
+    # Holm on the seed-level t-test, within each (contrast, metric) across
+    # held-out domains. Not across contrasts: see the module docstring. And not
+    # on the bootstrap tail mass, which is not a calibrated p at all.
     frame["p_holm"] = float("nan")
     frame["holm_family"] = ""
     for (name, metric_name), group in frame.groupby(["contrast", "metric"]):
-        adjusted = holm_adjust(group["p_value"].tolist())
+        adjusted = holm_adjust(group["p_ttest"].tolist())
         frame.loc[group.index, "p_holm"] = adjusted
         frame.loc[group.index, "holm_family"] = (
             f"{name}/{metric_name} across {len(group)} held-out domain(s)")
@@ -271,18 +282,28 @@ def main() -> None:
             print(f"  {target:8} incomplete -- {sorted(parts)} of 3 contrasts")
 
     # ----------------------------------------------------------- the report
-    print("\nQWK, by contrast:")
+    print("\nQWK, by contrast. The interval is the crossed bootstrap "
+          "(uncertainty);\np is the seed-level t-test (inference); flip is the "
+          "exact sign-flip (sensitivity).")
     header = (f"  {'contrast':11} {'target':8} {'seeds':5} {'delta':>8} "
-              f"{'95% CI':>19} {'p':>7} {'p_holm':>7} {'sign':>5}")
+              f"{'95% CI':>19} {'p_t':>7} {'p_holm':>7} {'flip':>6} {'sign':>5}")
     print(header)
     print("  " + "-" * (len(header) - 2))
+    floors = set()
     for name, _, _, isolates in CONTRASTS:
         for _, r in frame[(frame.contrast == name)
                           & (frame.metric == "qwk")].iterrows():
             interval = f"[{r.ci_lower:+.4f}, {r.ci_upper:+.4f}]"
+            floors.add((int(r.n_seeds), float(r.min_attainable_signflip_p)))
             print(f"  {name:11} {r.target:8} {int(r.n_seeds):5} "
-                  f"{r.delta:+8.4f} {interval:>19} {r.p_value:7.3f} "
-                  f"{r.p_holm:7.3f} {int(r.sign_agreement)}/{int(r.n_seeds)}")
+                  f"{r.delta:+8.4f} {interval:>19} {r.p_ttest:7.3f} "
+                  f"{r.p_holm:7.3f} {r.p_signflip:6.3f} "
+                  f"{int(r.sign_agreement)}/{int(r.n_seeds)}")
+    for n_seeds, floor in sorted(floors):
+        print(f"\n  at {n_seeds} seeds the exact sign-flip test cannot return "
+              f"a two-sided p below {floor:.4f},")
+        print(f"  so it cannot reach significance at this sample size for any "
+              f"effect size.")
 
     print("\nin-domain resolution is NOT decomposed: the in-domain 512 px runs "
           "have no 224/b16 counterpart, so it remains a configuration effect.")

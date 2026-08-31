@@ -127,6 +127,10 @@ def main() -> int:
     DERIVED_CONSTANTS = {
         # Smallest attainable two-sided sign-flip p at five seeds: 2 / 2**5.
         "0.0625",
+        # The same floor at three seeds, for the Q1 decomposition: 2 / 2**3.
+        # Quoted so a reader does not read the sign-flip's 0.25 as evidence of
+        # absence when it is the smallest value the test can return.
+        "0.2500",
     }
     unsupported = sorted(quoted - supported - DERIVED_CONSTANTS)
     if unsupported:

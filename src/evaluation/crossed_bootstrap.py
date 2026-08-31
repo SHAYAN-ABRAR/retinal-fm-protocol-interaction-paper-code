@@ -41,6 +41,14 @@ With a handful of seeds the seed-level resample is coarse -- five seeds admit
 only so many distinct multisets -- so the interval is honest about seed
 uncertainty but not precise about it. That is a property of the design, not of
 the estimator, and the seed count is reported beside every interval.
+
+**It does not test a hypothesis.** This function returns no p-value. It once
+returned the tail mass of the bootstrap distribution under that name, and two
+analyses Holm-corrected it -- but that distribution is generated around the
+empirical estimate rather than under H0: delta = 0, so its tail mass is not a
+calibrated p and correcting it for multiplicity only lends it false authority.
+Formal inference is ``src/evaluation/seed_inference.py``, which tests the
+per-seed effects this function returns in ``per_seed_difference``.
 """
 
 from __future__ import annotations
@@ -98,16 +106,25 @@ def crossed_bootstrap_difference(
         draws[i] = float(np.mean(deltas))
 
     lower, upper = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-    # Two-sided achieved significance level, the same convention the project's
-    # existing bootstrap uses.
-    p = 2.0 * min((draws <= 0).mean(), (draws >= 0).mean())
+
+    # No p_value is returned, deliberately. This function used to report
+    #     p = 2 * min(mean(draws <= 0), mean(draws >= 0))
+    # and two analyses Holm-corrected it. That tail mass is not a calibrated
+    # test: the bootstrap distribution is built around the empirical estimate,
+    # not under H0: delta = 0, so it describes the estimate's spread rather
+    # than the probability of the data under a null. Correcting it for
+    # multiplicity gave an uncalibrated number the appearance of a controlled
+    # family-wise error rate.
+    #
+    # Formal inference lives in src/evaluation/seed_inference.py and operates on
+    # the per-seed effects returned below. The key is absent rather than set to
+    # NaN so that any code still expecting it fails loudly.
 
     values = np.array(list(per_seed.values()))
     return {
         "difference": observed,
         "ci_lower": float(lower),
         "ci_upper": float(upper),
-        "p_value": float(min(1.0, p)),
         "n_seeds": len(shared),
         "seeds": shared,
         "per_seed_difference": per_seed,

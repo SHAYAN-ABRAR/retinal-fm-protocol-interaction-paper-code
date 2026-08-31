@@ -47,7 +47,13 @@ TOLERANCE = 1e-6
 # backfilled to the project default rather than reported as a fault.
 DEFAULTS = {"backbone": "densenet121", "image_size": 224, "batch_size": 32,
             "domain_balanced": False, "irm_anneal_iters": 500,
-            "trainable_blocks": -1, "learning_rate": 3e-4}
+            "trainable_blocks": -1, "learning_rate": 3e-4,
+            # Every run before --accumulation-steps took one optimiser step per
+            # micro-batch.
+            "accumulation_steps": 1,
+            # No run before --full-finetune existed was one; 20 epochs was the
+            # only budget.
+            "full_finetune": False, "epochs": 20}
 
 
 class Audit:
@@ -145,12 +151,29 @@ def specifications():
         # Partial fine-tuning and a non-default rate, mirroring run_lodo again.
         # -1 means the whole network trained, which is what every run before the
         # flag existed did, so it adds nothing to the tag.
-        blocks = row.get("trainable_blocks", -1)
-        if blocks == blocks and int(blocks) >= 0:
-            tag += f"-tb{int(blocks)}"
+        # Mirrors run_lodo._method_tag. -ftfull cannot be derived from
+        # trainable_blocks: full fine-tuning and an unfrozen CNN both record -1.
+        if bool(row.get("full_finetune", False)):
+            tag += "-ftfull"
+        else:
+            blocks = row.get("trainable_blocks", -1)
+            if blocks == blocks and int(blocks) >= 0:
+                tag += f"-tb{int(blocks)}"
         rate = row.get("learning_rate", 3e-4)
         if rate == rate and float(rate) != 3e-4:
             tag += f"-lr{float(rate):g}"
+        # Mirrors run_lodo._method_tag once more. The id carries the physical
+        # batch, so without this a run at batch 4 with accumulation 4 rebuilds
+        # the id of a batch-4 run with no accumulation -- two different
+        # effective batch sizes under one name.
+        accum = row.get("accumulation_steps", 1)
+        if accum == accum and int(accum) > 1:
+            tag += f"-ga{int(accum)}"
+        # A non-default epoch budget is stamped so a smoke test cannot take a
+        # scientific run's id.
+        epochs = row.get("epochs", 20)
+        if epochs == epochs and int(epochs) != 20:
+            tag += f"-e{int(epochs)}"
         return tag
 
     def n_sources(registry_row) -> int:
@@ -226,8 +249,9 @@ def specifications():
             # run_lodo.py merges on, or the audit calls a legitimate pair of
             # rows a duplicate.
             "key": ["target", "method", "seed", "backbone", "image_size",
-                    "batch_size", "domain_balanced", "irm_anneal_iters",
-                    "trainable_blocks", "learning_rate"],
+                    "batch_size", "accumulation_steps", "domain_balanced",
+                    "irm_anneal_iters", "trainable_blocks", "learning_rate",
+                    "full_finetune", "epochs"],
             "experiment_id": lodo_id,
             "target_of": lambda row: row["target"],
             # table column -> registry column

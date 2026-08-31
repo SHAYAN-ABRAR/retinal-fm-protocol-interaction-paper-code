@@ -50,6 +50,7 @@ def main() -> None:
 
     from src.evaluation.crossed_bootstrap import (crossed_bootstrap_difference,
                                                   holm_adjust)
+    from src.evaluation.seed_inference import seed_level_test
     from src.evaluation.metrics import quadratic_weighted_kappa
     from src.utils.io import project_root
     from src.visualization.calibration_figures import load_target_predictions
@@ -98,9 +99,17 @@ def main() -> None:
                 "n_seeds": r["n_seeds"], "n_test": len(truth),
                 "delta_qwk": r["difference"],
                 "ci_lower": r["ci_lower"], "ci_upper": r["ci_upper"],
-                "p_value": r["p_value"], "seed_sd": r["seed_sd"],
+                "seed_sd": r["seed_sd"],
                 "sign_agreement": r["sign_agreement"],
                 "exceeds_seed_sd": r["exceeds_seed_sd"],
+                # Inference on the per-seed effects. The bootstrap no longer
+                # returns a p_value: its tail mass is built around the
+                # empirical estimate, not under H0, so Holm-correcting it gave
+                # an uncalibrated quantity the look of a controlled error rate.
+                **{k: v for k, v in seed_level_test(
+                    list(r["per_seed_difference"].values())).items()
+                   if k in {"t_stat", "p_ttest", "p_signflip",
+                            "min_attainable_p"}},
             })
 
     if not records:
@@ -108,12 +117,19 @@ def main() -> None:
         return
 
     frame = pd.DataFrame(records)
-    frame["p_holm"] = holm_adjust(frame["p_value"].tolist())
+    frame["p_holm"] = holm_adjust(frame["p_ttest"].tolist())
     frame["ci_excludes_zero"] = (frame.ci_lower > 0) | (frame.ci_upper < 0)
+    # A claim needs both bars: the seed-level test (does another seed agree?)
+    # and the crossed interval (does another sample of patients agree?). They
+    # part company on IDRiD frozen, where ten seeds give Holm p = 0.014 but a
+    # 507-case test set leaves the interval spanning zero.
+    established = (frame.p_holm < 0.05) & frame.ci_excludes_zero
     frame["verdict"] = np.where(
-        frame.p_holm < 0.05,
+        established,
         np.where(frame.delta_qwk > 0, "ImageNet init better", "RETFound better"),
-        "no difference after correction")
+        np.where(frame.p_holm < 0.05,
+                 "seed-level only; crossed interval spans zero",
+                 "no difference after correction"))
 
     print("=" * 112)
     print("CROSSED SEED x CASE BOOTSTRAP -- RETFound vs its ImageNet-MAE "
@@ -121,11 +137,19 @@ def main() -> None:
     print("=" * 112)
     print("  delta = ImageNet-MAE minus RETFound. Seeds resampled with "
           "replacement; one case sample per")
-    print("  iteration shared across every seed and both models. Holm across "
-          "all six comparisons.\n")
+    print("  iteration shared across every seed and both models. The interval "
+          "is the bootstrap and quantifies")
+    print("  uncertainty; p_ttest is a one-sample t-test on the per-seed "
+          "effects and is the inference, Holm-")
+    print("  corrected across all six comparisons; p_signflip is the exact "
+          "permutation sensitivity check.\n")
     print(frame[["protocol", "target", "n_seeds", "delta_qwk", "ci_lower",
-                 "ci_upper", "p_value", "p_holm", "seed_sd", "sign_agreement",
-                 "verdict"]].round(4).to_string(index=False))
+                 "ci_upper", "p_ttest", "p_holm", "p_signflip", "seed_sd",
+                 "sign_agreement", "verdict"]].round(4).to_string(index=False))
+    for n_seeds in sorted(frame.n_seeds.unique()):
+        floor = float(frame[frame.n_seeds == n_seeds].min_attainable_p.iloc[0])
+        print(f"\n  at {int(n_seeds)} seeds the exact sign-flip test cannot "
+              f"return a two-sided p below {floor:.4f}.")
 
     print("\n  Robustness diagnostics (NOT the significance test):")
     for _, r in frame.iterrows():

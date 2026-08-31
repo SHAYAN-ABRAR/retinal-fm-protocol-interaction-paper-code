@@ -12,19 +12,37 @@ discrimination and not calibration. This phase asks the question those two leave
 open: **if the method does not matter and the architecture barely does, what
 does?**
 
-The answer is the one nobody writes a paper about. It is the input resolution.
+The answer is the one nobody writes a paper about. It is the input configuration.
 
 ---
 
 ## 0. Answer
 
-**Doubling the input resolution improves cross-domain grading on all four
-targets, by more than any method, any backbone, and four times the training
-data.**
+> **Read §1b first.** The +0.0967 below is the **combined** change
+> 224/b32 → 512/b16, not an isolated resolution effect. Until Q1 (2026-08-31)
+> no 224/b16 run existed, so the two factors could not be separated. They now
+> are, on EyePACS and IDRiD only. Three distinct quantities:
+>
+> | | Change | What it measures |
+> |---|---|---|
+> | **A** | 224/b32 → 512/b16 | combined configuration, all four targets |
+> | **B** | 224/b16 → 512/b16 | isolated resolution, EyePACS and IDRiD only |
+> | **C** | 224/b32 → 224/b16 | isolated batch size, EyePACS and IDRiD only |
+>
+> **No isolated resolution effect is claimed for DDR or APTOS** — they have no
+> 224/b16 arm. Their numbers below are combined-configuration effects.
+
+**Changing the input configuration from 224 px/batch 32 to 512 px/batch 16
+improves cross-domain grading on all four targets, by more than any method, any
+backbone, and four times the training data. On the two targets where the
+factors have been separated, resolution is the larger term on EyePACS and about
+half the effect on IDRiD.**
 
 | What was changed | Best QWK gain on EyePACS (LODO) | Cost |
 |---|---|---|
-| **224 px → 512 px** | **+0.0967** | 1.0 h GPU per run |
+| **224/b32 → 512/b16 (combined)** | **+0.0967** | 1.0 h GPU per run |
+| *of which isolated resolution* | *+0.0865* | — |
+| *of which isolated batch size* | *+0.0103 (not significant)* | — |
 | DenseNet121 → ConvNeXt-Tiny | +0.0554 | 0.2 h GPU per run |
 | 4× the training data (extrapolated to the in-domain budget) | +0.0177 | — |
 | Every DG method in Phase 4 | none beat ERM | 0.3 h GPU per run |
@@ -89,10 +107,31 @@ smaller than its own seed SD and inconsistent in sign, and resolution accounts
 for nearly nine-tenths of the combined effect. On IDRiD the split is closer to
 even: +0.0459 batch against +0.0421 resolution.
 
-**What survives.** Resolution clears Holm correction on both domains. Batch
-clears it on neither — but its IDRiD estimate moves all three seeds the same
-way, so it is underpowered rather than absent, and IDRiD's resolution effect
-should be quoted as the batch-controlled +0.0421, not the confounded +0.0880.
+**What survives, under corrected inference.** The *p*-values in the table are a
+one-sample *t*-test on the per-seed effects, Holm-corrected across the two
+domains. They are **not** the crossed bootstrap's tail mass, which an earlier
+version of this report used: that quantity is generated around the empirical
+estimate rather than under H0, so it was never a calibrated *p*-value, and
+Holm-correcting it lent it authority it did not have. See
+`src/evaluation/seed_inference.py`.
+
+| | EyePACS | IDRiD |
+|---|---|---|
+| Resolution, *t*-test *p* | 0.0148 | 0.0876 |
+| Resolution, Holm | **0.0296** | 0.0876 |
+| Batch, *t*-test *p* | 0.5207 | 0.2014 |
+
+**The batch-controlled resolution effect is established on EyePACS.** IDRiD
+shows a positive effect across all three seeds but remains underpowered at the
+seed level. The batch contrast reaches significance on neither domain. IDRiD's
+resolution effect should be quoted as the batch-controlled +0.0421 rather than
+the confounded +0.0880 — but as a point estimate, not a result.
+
+**The permutation floor.** At *n* = 3 the exact two-sided sign-flip test cannot
+return a *p* below **0.2500**: the observed sign assignment and its exact
+negation always qualify, giving 2/2³. Every sign-flip *p* in this decomposition
+is therefore 0.2500 or 0.5000, and none can be read as evidence of absence. It
+is reported as a sensitivity check only.
 
 **What is not decomposed.** The in-domain 512 px runs have no 224 px/batch-16
 counterpart, so in-domain resolution remains a configuration effect.

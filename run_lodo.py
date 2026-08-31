@@ -37,6 +37,10 @@ IMAGE_SIZE = 224
 BACKBONE = "densenet121"
 BATCH_SIZE = 32
 EPOCHS = 20
+# The scientific budget. EPOCHS is overridable with --epochs for smoke
+# tests; any other value is stamped into the experiment id so a short
+# engineering run can never be confused with, or overwrite, a real one.
+DEFAULT_EPOCHS = 20
 # Domain-balanced batches. Off by default so every existing run is reproducible
 # by rerunning this file; set by main() via --domain-balanced.
 DOMAIN_BALANCED = False
@@ -58,6 +62,12 @@ FULL_FINETUNE = False
 # Set by --gradient-checkpointing. Recorded because it changes memory and step
 # time but must not change results; if it ever does, that is a bug worth seeing.
 GRADIENT_CHECKPOINTING = False
+# Set by --accumulation-steps. The effective batch is BATCH_SIZE x this, and it
+# is the effective batch that has to match across a comparison. Full
+# fine-tuning a ViT-L in 8 GB needs a physical batch well under 16, so this is
+# how a full-FT arm keeps the same optimisation as the partial-FT arm it is
+# compared against.
+ACCUMULATION_STEPS = 1
 
 
 def enable_gradient_checkpointing(model) -> None:
@@ -160,6 +170,19 @@ def _method_tag(method_name: str) -> str:
         tag += f"-tb{TRAINABLE_BLOCKS}"
     if LEARNING_RATE != 3e-4:
         tag += f"-lr{LEARNING_RATE:g}"
+    # Accumulation is part of the identity, not an implementation detail. The
+    # id already carries the *physical* batch, so batch 4 x accumulation 4 and
+    # batch 4 with no accumulation would otherwise be the same id -- two runs
+    # with different effective batch sizes overwriting each other. That is the
+    # fifth version of this bug in this file; the others are documented above.
+    if ACCUMULATION_STEPS > 1:
+        tag += f"-ga{ACCUMULATION_STEPS}"
+    # Epoch budget is part of the identity too. A 2-epoch smoke test and a
+    # 20-epoch scientific run are not the same experiment, and without this the
+    # smoke test would take the real run's id and overwrite its checkpoint and
+    # predictions -- or, worse, be mistaken for it later.
+    if EPOCHS != DEFAULT_EPOCHS:
+        tag += f"-e{EPOCHS}"
     if DOMAIN_BALANCED:
         # Without this a domain-balanced run and an ordinary one share an id and
         # the second silently destroys the first's checkpoint and predictions --
@@ -258,10 +281,18 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
 
     train_config = TrainConfig(
         epochs=EPOCHS, batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE,
-        weight_decay=1e-4,
+        weight_decay=1e-4, accumulation_steps=ACCUMULATION_STEPS,
         warmup_epochs=1, scheduler="cosine", amp=True, grad_clip_norm=1.0,
         early_stopping_patience=6, monitor="qwk", seed=seed,
     )
+    # Say it out loud. The whole point of accumulation is that the effective
+    # batch is unchanged while the physical one shrinks to fit VRAM, and a run
+    # whose effective batch quietly differs from its comparators is not a
+    # control.
+    if ACCUMULATION_STEPS > 1:
+        print(f"    gradient accumulation: physical batch {BATCH_SIZE} x "
+              f"{ACCUMULATION_STEPS} steps = effective batch "
+              f"{train_config.effective_batch_size}", flush=True)
     trainer = Trainer(
         built.model, built.loss_fn, train_config,
         device="cuda",
@@ -336,7 +367,13 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         "gradient_checkpointing": GRADIENT_CHECKPOINTING,
         "params_total_m": round(total / 1e6, 2),
         "params_trainable_m": round(trainable / 1e6, 2),
-        "accumulation_steps": 1, "effective_batch_size": BATCH_SIZE,
+        # Recorded, not assumed. These were hardcoded to 1 and BATCH_SIZE, so a
+        # run using accumulation would have been registered as if it had not --
+        # and effective batch size is the thing that has to match across a
+        # comparison for it to be a comparison.
+        "physical_batch_size": BATCH_SIZE,
+        "accumulation_steps": ACCUMULATION_STEPS,
+        "effective_batch_size": BATCH_SIZE * ACCUMULATION_STEPS,
         "learning_rate": LEARNING_RATE, "weight_decay": 1e-4,
         "epochs_planned": EPOCHS, "epochs_run": len(history), "seed": seed,
         "deterministic": False,
@@ -382,6 +419,14 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         # the audit rebuilds erm-b16 for an erm-b16-tb4-lr0.0001 row.
         "trainable_blocks": recorded_trainable_blocks(),
         "learning_rate": LEARNING_RATE,
+        "accumulation_steps": ACCUMULATION_STEPS,
+        "effective_batch_size": BATCH_SIZE * ACCUMULATION_STEPS,
+        # full_finetune cannot be inferred from trainable_blocks: both a full
+        # fine-tune and an unfrozen CNN record -1, so a row without this flag
+        # rebuilds the wrong experiment id. epochs likewise -- a 2-epoch smoke
+        # test and a 20-epoch run are different experiments.
+        "full_finetune": FULL_FINETUNE,
+        "epochs": EPOCHS,
         "n_train": len(experiment.train), "n_test": len(experiment.test),
         "source_qwk": source_result.metrics["qwk"],
         "target_qwk": target_result.metrics["qwk"],
@@ -446,6 +491,13 @@ def main() -> None:
     if "--gradient-checkpointing" in arguments:
         arguments.remove("--gradient-checkpointing")
         GRADIENT_CHECKPOINTING = True
+    global ACCUMULATION_STEPS
+    ACCUMULATION_STEPS = int(_take("--accumulation-steps", "1"))
+    global EPOCHS
+    EPOCHS = int(_take("--epochs", str(EPOCHS)))
+    if ACCUMULATION_STEPS < 1:
+        raise SystemExit(
+            f"--accumulation-steps must be at least 1, got {ACCUMULATION_STEPS}")
     seeds = [int(s) for s in _take("--seeds", "42").split(",")]
     targets = _take("--targets", ",".join(ALL_DOMAINS)).split(",")
 
@@ -512,8 +564,9 @@ def main() -> None:
                 # id, which carries the batch tag -- but the summary table is
                 # what the paper's generators read, so it must not be lossy.
                 ["target", "method", "seed", "backbone", "image_size",
-                 "batch_size", "domain_balanced", "irm_anneal_iters",
-                 "trainable_blocks", "learning_rate"],
+                 "batch_size", "accumulation_steps", "domain_balanced",
+                 "irm_anneal_iters", "trainable_blocks", "learning_rate",
+                 "full_finetune", "epochs"],
             )
             frame = frame.sort_values(
                 ["backbone", "seed", "target"]).reset_index(drop=True)

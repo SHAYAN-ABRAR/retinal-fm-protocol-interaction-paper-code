@@ -74,7 +74,21 @@ def foundation_table(tables):
         if row.empty:
             return ["NOT RUN", "--", "--", "--"]
         r = row.iloc[0]
-        established = r.p_holm < 0.05
+        # Bold requires the seed-level test to survive Holm *and* the crossed
+        # interval to exclude zero, because the two carry different error
+        # models and a generalisation claim needs both. The t-test conditions
+        # on this test set and asks whether another seed would agree; the
+        # crossed interval also resamples cases and asks whether another sample
+        # of patients would. IDRiD frozen is exactly where they part company --
+        # Holm p = 0.014 over ten seeds, but a 507-case test set leaves the
+        # interval spanning zero. Bolding on the test alone would advertise as
+        # established an effect whose uncertainty includes no effect at all.
+        #
+        # This is not the retired two-bar rule, which paired a calibrated
+        # interval with an uncalibrated seed-SD threshold. Both bars here are
+        # calibrated; they differ in what they let vary.
+        ci_excludes_zero = (r.ci_lower > 0) or (r.ci_upper < 0)
+        established = bool(r.p_holm < 0.05 and ci_excludes_zero)
         value = f"{r.delta_qwk:+.4f}"
         delta = ("$" + BS + "mathbf{" + value + "}$") if established else ("$" + value + "$")
         ci = "$[" + f"{r.ci_lower:+.4f}, {r.ci_upper:+.4f}" + "]$"

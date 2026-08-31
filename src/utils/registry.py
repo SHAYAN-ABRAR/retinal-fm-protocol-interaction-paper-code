@@ -166,6 +166,16 @@ KEY_COLUMN_DEFAULTS: dict[str, object] = {
     # enough to predate it -- but batch_size is a key now, and a key column that
     # can be blank is the bug this dictionary exists to prevent.
     "batch_size": 32,
+    # Every run before --accumulation-steps existed took one optimiser step per
+    # micro-batch. Like batch_size, this is a key, so a blank value in it is the
+    # bug this dictionary exists to prevent.
+    "accumulation_steps": 1,
+    # No run before --full-finetune existed was one, and 20 epochs was the only
+    # budget. Both are keys now: full_finetune cannot be derived from
+    # trainable_blocks (a full fine-tune and an unfrozen CNN both record -1),
+    # and a 2-epoch smoke test is not the same experiment as a 20-epoch run.
+    "full_finetune": False,
+    "epochs": 20,
 }
 
 

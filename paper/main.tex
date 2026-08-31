@@ -109,7 +109,8 @@ established at this seed budget.
       diagnostics confirming each method's machinery engaged.
 \item A quantification of what \emph{does} move cross-domain performance: a
       higher-resolution configuration exceeds every method and architecture
-      change tested, though resolution and batch size are not yet separated
+      change tested. A dedicated batch-size control separates resolution
+      from the batch size confounded with it
       (Section~\ref{sec:resolution}).
 \item A methodological result of independent interest: three effects in this
       study were significant under a paired bootstrap at three seeds and
@@ -218,7 +219,7 @@ only. A linear head is trained for 200 epochs; the schedule was chosen by
 convergence against an exact L-BFGS reference \emph{on source validation}, with
 no target-test quantity involved in the choice.
 
-\textbf{Fine-tuned protocol.} The last 4 of 24 transformer blocks are unfrozen,
+\textbf{Partial fine-tuning protocol.} The last 4 of 24 transformer blocks are unfrozen,
 which is $50.4$M of $303.3$M trainable and identical for both models. Both use
 $\mathrm{lr}=10^{-4}$, batch 16, 20 epochs with early stopping.
 
@@ -227,9 +228,11 @@ excluded as a held-out target throughout; using it would report leakage as
 generalization. This is enforced by a guard that raises rather than warns.
 EyePACS remains a \emph{source} domain, which is sound, since source domains are
 seen by construction. DDR, APTOS and IDRiD are not named in RETFound's
-pretraining description, but that description does not enumerate its public
-datasets; we record them as \emph{overlap not ruled out} rather than clean, and
-return to this in Section~\ref{sec:limits}.
+published colour-fundus pretraining corpus, whose composition is enumerated
+in the source publication as 815{,}468 MEH-MIDAS and 88{,}702 EyePACS
+photographs; we record them as \emph{not in the published corpus}. The
+claim rests on that publication rather than on the checkpoint, which carries
+no manifest of what it saw.
 
 \subsection{Domain-generalization objectives}
 Deep CORAL~\cite{sun2016deepcoral}, MixStyle~\cite{zhou2021mixstyle},
@@ -246,17 +249,20 @@ report how often each method's machinery was degenerate.
 \label{sec:protocol}
 Table~\ref{tab:foundation} and Fig.~\ref{fig:protocol} give the comparison.
 Frozen, at ten seeds, the general-purpose initialisation is ahead on DDR
-($+0.0626$, $2.46\times$ SD) and APTOS ($+0.1134$, $2.07\times$), both clearing
-Section~\ref{sec:bars}; IDRiD is within seed noise. Fine-tuned, at five seeds,
-no target favours it: DDR $+0.0217$ ($0.82\times$), APTOS $+0.0073$
-($0.42\times$), and IDRiD $-0.0423$ ($1.13\times$, all five seeds agreeing)
-favours RETFound.
+($+0.0626$) and APTOS ($+0.1134$), both established under
+Section~\ref{sec:bars}. IDRiD points the other way ($-0.0429$, nine of ten
+seeds agreeing) and its per-seed effect is significant after correction, but
+its crossed interval spans zero on a 507-case test set; we therefore do not
+claim it. Under partial fine-tuning, at five seeds, no target is established:
+DDR $+0.0217$, APTOS $+0.0073$, IDRiD $-0.0423$. None survives correction, so
+the correct statement is that no difference is demonstrated under this
+protocol --- not that RETFound is favoured anywhere.
 
 The mechanism is visible in the source--target split
 (Fig.~\ref{fig:mechanism}). Frozen, both models fit
 the source domains almost identically (within $0.017$ QWK on every target); the
 entire difference is the drop from source to target, which is $5.9\times$ larger
-for RETFound on DDR and $2.4\times$ larger on APTOS. Fine-tuned, RETFound fits
+for RETFound on DDR and $2.4\times$ larger on APTOS. Under partial fine-tuning, RETFound fits
 the sources marginally better on all three targets. Whatever the frozen
 representation lacked for transfer, four unfrozen blocks recover.
 
@@ -268,8 +274,9 @@ QWK difference (ImageNet-MAE minus RETFound) on each held-out domain; error
 bars are the across-seed standard deviation of the paired per-seed differences.
 Right: the same effects expressed as multiples of that standard deviation,
 with the bar of Section~\ref{sec:bars} marked. The frozen protocol reports a
-large advantage for the general-purpose initialisation on two domains; the
-fine-tuned protocol reports none, and reverses on the third.}
+large advantage for the general-purpose initialisation on two domains; under
+partial fine-tuning none is established, and the point estimate on the third
+domain points the other way.}
 \label{fig:protocol}
 \end{figure*}
 
@@ -280,7 +287,7 @@ fine-tuned protocol reports none, and reverses on the third.}
 QWK to held-out-target QWK, so a taller bar means the representation transfers
 worse. Frozen (left), RETFound loses substantially more than the checkpoint it
 was initialised from on DDR and APTOS despite fitting the source domains
-equally well. Fine-tuned (right), the difference closes.}
+equally well. Under partial fine-tuning (right), the difference closes.}
 \label{fig:mechanism}
 \end{figure*}
 
@@ -323,7 +330,7 @@ Three effects in this study were significant under a paired bootstrap and did
 not survive additional seeds (Fig.~\ref{fig:seeds}). MixStyle beat ERM by
 $+0.0194$ QWK on one seed with a bootstrap interval of $[+0.0102, +0.0286]$ and
 $p<0.001$; averaged over three seeds the difference was $+0.0061$ with the seeds
-disagreeing in sign. The fine-tuned RETFound comparison cleared the bar at
+disagreeing in sign. The partial fine-tuning RETFound comparison cleared the bar at
 $1.03\times$ on DDR and $1.58\times$ on APTOS with three seeds, and fell to
 $0.82\times$ and $0.42\times$ with five.
 
@@ -371,18 +378,25 @@ The two domains do not answer alike. On EyePACS the batch contrast is
 $+0.0103$ QWK, smaller than its own across-seed SD and not even consistent in
 sign across seeds, while the resolution contrast is $+0.0865$ --- nearly
 nine-tenths of the combined $+0.0967$. On IDRiD the split is closer to even:
-$+0.0459$ from batch and $+0.0421$ from resolution. The resolution contrast
-survives Holm correction on both domains; the batch contrast survives on
-neither, though its IDRiD estimate moves all three seeds in the same direction
-and is better read as underpowered than as absent.
+$+0.0459$ from batch and $+0.0421$ from resolution.
 
-We therefore report resolution as the dominant term on EyePACS and as about
-half the effect on IDRiD, and quote the batch-controlled estimates rather than
-the confounded ones. Two limits remain. Three seeds is a coarse basis for the
-seed-level resample, so these intervals are honest about seed uncertainty
-without being precise about it. And the in-domain 512\,px runs have no
-224\,px/batch-16 counterpart, so in-domain resolution is still a configuration
-effect and is reported as one.
+\textbf{The batch-controlled resolution effect is established on EyePACS}
+(Holm-corrected $p=0.030$ on the per-seed effects). IDRiD shows a positive
+effect on all three seeds but remains underpowered at the seed level
+($p=0.088$), and the batch contrast reaches significance on neither domain.
+We therefore claim isolated resolution only where it is established, quote the
+batch-controlled estimate rather than the confounded one, and treat IDRiD's
+split as a point estimate rather than a result.
+
+Three limits bound this. Three seeds is a very small basis for seed-level
+inference: the exact sign-flip permutation test cannot return a two-sided $p$
+below $0.2500$ at $n=3$, so it cannot reach significance here for any effect
+size, and it is reported as a sensitivity check rather than as evidence. The
+decomposition exists only for EyePACS and IDRiD, the two held-out domains with
+a 512\,px arm; no isolated resolution effect is claimed for DDR or APTOS, whose
+comparisons remain the combined configuration. And the in-domain 512\,px runs
+have no 224\,px/batch-16 counterpart, so in-domain resolution is still a
+configuration effect and is reported as one.
 
 \input{../outputs/tables/table_configuration}
 
@@ -440,24 +454,31 @@ domain-generalization literature does not study.
 \begin{itemize}
 \item \textbf{Partial fine-tuning.} The last 4 of 24 blocks were unfrozen. Full
       fine-tuning is affordable on the hardware used and remains untested.
-\item \textbf{IDRiD is the smallest target} (507 test images) and clears its
-      bar by the narrowest margin in the study ($1.13\times$). It is reported at
-      five seeds, the same standard applied to the two nulls.
-\item \textbf{Pretraining overlap is not ruled out} for DDR, APTOS and IDRiD.
+\item \textbf{IDRiD is the smallest target} (507 test images). Its frozen
+      per-seed effect survives correction while its crossed interval, which
+      also resamples cases, spans zero; we report both and claim neither.
+      Case-level uncertainty dominates at this test-set size.
+\item \textbf{Pretraining provenance rests on the publication.} DDR, APTOS
+      and IDRiD are not in RETFound's published colour-fundus corpus, whose
+      composition is enumerated. The released checkpoint carries no manifest,
+      so this is what the primary source establishes, not a verified audit.
 \item \textbf{One modality, one task, four datasets}, with documented label
       quality problems in at least two.
 \item \textbf{No clinical validation.} No reader study and no deployment data.
-\item \textbf{Nulls are not equivalences.} Two fine-tuned targets are
-      non-significant, not demonstrated equal.
+\item \textbf{Nulls are not equivalences.} Two of the three partially fine-tuned
+      targets are non-significant, not demonstrated equal.
 \end{itemize}
 
 % ------------------------------------------------------------- conclusion
 \section{Conclusion}
-Evaluating a medical foundation model with a frozen linear probe and evaluating
-it by fine-tuning can support opposite conclusions about the same two models on
-the same data. In our matched comparison the cheap protocol favours the
-general-purpose initialisation on two of three held-out domains and the
-deployed protocol favours neither. Reported alongside a leave-one-domain-out
+Frozen probing and partial fine-tuning yield materially different point
+estimates of the relative advantage of the two initialisations, although the
+direct protocol interaction is not statistically established at the current
+seed budget. In our matched comparison the cheap protocol favours the
+general-purpose initialisation on two of three held-out domains, while under
+partial fine-tuning no domain shows a difference surviving correction. We note
+that this is partial fine-tuning of the last 4 of 24 blocks, not full
+fine-tuning, and the two should not be equated. Reported alongside a leave-one-domain-out
 study in which no domain-generalization objective beat ERM and input resolution
 beat all of them, the results suggest that measurement protocol deserves as much
 scrutiny in this area as method design.
@@ -472,7 +493,11 @@ requirements for secondary analysis of public data --- do not assert that
 approval was not required until this is confirmed}
 
 \section*{Reproducibility}
-All \num{278} runs are recorded in a machine-checked experiment registry; every
+The experiment registry is an append-only log of \num{298} entries covering
+\num{284} unique configurations, of which \num{279} completed and \num{5}
+diverged; a further \num{9} log entries were superseded by a later run of the
+same configuration. Only the completed configurations contribute results, and
+these five counts are not interchangeable. Every
 table and figure in this paper is emitted by a script from that registry, and a
 consistency audit verifies the derived tables against it. Runs that diverged are
 recorded as such rather than omitted.
