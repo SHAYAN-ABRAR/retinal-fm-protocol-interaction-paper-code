@@ -92,6 +92,38 @@ def checks():
     return out
 
 
+def check_run_accounting(text: str) -> list[str]:
+    """The five run counts must match the registry as it stands right now.
+
+    These are the numbers most likely to go stale, because every run changes
+    them. The manuscript said 278 while the registry held 298 log entries, 284
+    unique ids and 279 completed -- three defensible numbers, none of them the
+    one printed. Two smoke runs later it was wrong again. So it is checked
+    rather than remembered.
+    """
+    import re as _re
+
+    frame = _table("run_accounting.csv")
+    if frame is None:
+        return ["run_accounting.csv missing -- run export_run_accounting.py"]
+    row = frame.iloc[0]
+    problems = []
+    for column, label in [("log_entries", "log entries"),
+                          ("unique_experiments", "unique configurations"),
+                          ("completed", "completed"),
+                          ("diverged", "diverged"),
+                          ("superseded_log_entries", "superseded")]:
+        value = int(row[column])
+        # \num{300} or a bare 300, but not 300 inside a longer number.
+        pattern = (r"\\num\{" + str(value) + r"\}|(?<![\d.])"
+                   + str(value) + r"(?![\d.])")
+        if not _re.search(pattern, text):
+            problems.append(
+                f"  run accounting: {label} is {value} in run_accounting.csv "
+                f"but does not appear in main.tex")
+    return problems
+
+
 def main() -> int:
     if not MANUSCRIPT.exists():
         print(f"no manuscript at {MANUSCRIPT}")
@@ -132,6 +164,14 @@ def main() -> int:
         # absence when it is the smallest value the test can return.
         "0.2500",
     }
+    stale_counts = check_run_accounting(text)
+    if stale_counts:
+        print(f"\n!! {len(stale_counts)} run count(s) in the manuscript "
+              f"disagree with the registry:")
+        for problem in stale_counts:
+            print(problem)
+        return 1
+
     unsupported = sorted(quoted - supported - DERIVED_CONSTANTS)
     if unsupported:
         print(f"\n!! {len(unsupported)} four-decimal value(s) in the manuscript "
