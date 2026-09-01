@@ -86,6 +86,11 @@ class TrainConfig:
     early_stopping_patience: int = 8
     monitor: str = "qwk"
     monitor_mode: str = "max"
+    # best_loss.pt costs 1.2 GB for a ViT-L and no analysis in this
+    # repository reads it. Left on by default so every existing run type
+    # behaves exactly as before; the full fine-tuning runs turn it off,
+    # where ten runs would otherwise write 12 GB nothing consumes.
+    save_best_loss: bool = True
     log_every_n_steps: int = 50
     num_classes: int = 5
     seed: int = 42
@@ -303,6 +308,7 @@ class Trainer:
             experiment_id=experiment_id,
             monitor=config.monitor,
             mode=config.monitor_mode,
+            save_best_loss=config.save_best_loss,
         )
         self.early_stopping = EarlyStopping(
             patience=config.early_stopping_patience,

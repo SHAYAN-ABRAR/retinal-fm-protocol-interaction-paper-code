@@ -7,9 +7,16 @@ Three checkpoints are kept per run:
                   and RNG state, so resuming continues the same trajectory rather
                   than starting a statistically different one.
 ``best_qwk.pt``   Best **validation** QWK. This is the checkpoint every reported
-                  result uses.
-``best_loss.pt``  Best validation loss. Kept for the calibration analysis, where
-                  the lowest-NLL model is sometimes not the highest-QWK one.
+                  result uses. It holds **model weights only** -- plus epoch,
+                  metrics and config -- because every consumer loads it as
+                  ``load_checkpoint(path, model=...)`` and reads nothing else.
+                  Optimizer moments belong to resuming, and resuming reads
+                  ``last.pt``. For a ViT-L this is the difference between 1.2 GB
+                  and 3.4 GB per run, and ten full-FT runs at 3.4 GB do not fit
+                  on the disk available.
+``best_loss.pt``  Best validation loss. Optional, and off for the full
+                  fine-tuning runs: no analysis in this repository reads it
+                  (verified by search), and it costs 1.2 GB per run.
 
 The rule that must never be broken
 ----------------------------------
@@ -255,10 +262,20 @@ class CheckpointManager:
         if self._is_better(value):
             previous = self.best_value
             self.best_value, self.best_epoch = value, epoch
+            # Inference weights only. Every consumer of this file loads it as
+            # load_checkpoint(path, model=...) and reads nothing else, but it
+            # was being written with optimizer, scheduler, scaler and RNG state
+            # anyway -- for a ViT-L that is 3.4 GB where 1.2 GB carries the
+            # same information. The two AdamW moment tensors per parameter are
+            # what a *resume* needs, and a resume reads last.pt.
+            #
+            # epoch, global_step, metrics and config stay: restore_best_state()
+            # reads the best value back from this file's own metrics, and the
+            # config is what makes the artifact reproducible.
             save_checkpoint(
-                self.best_path, model=model, optimizer=optimizer, scheduler=scheduler,
-                scaler=scaler, epoch=epoch, global_step=global_step,
-                metrics=val_metrics, config=config,
+                self.best_path, model=model, epoch=epoch,
+                global_step=global_step, metrics=val_metrics, config=config,
+                include_rng=False,
             )
             written["best"] = True
             log.info(

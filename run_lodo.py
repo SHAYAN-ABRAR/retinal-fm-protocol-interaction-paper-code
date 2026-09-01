@@ -284,6 +284,10 @@ def run_one(target: str, method_name: str, seed: int) -> dict | None:
         weight_decay=1e-4, accumulation_steps=ACCUMULATION_STEPS,
         warmup_epochs=1, scheduler="cosine", amp=True, grad_clip_norm=1.0,
         early_stopping_patience=6, monitor="qwk", seed=seed,
+        # A ViT-L best_loss.pt is 1.2 GB and nothing in this repository reads
+        # it. Disabled only for full fine-tuning, where ten runs would write
+        # 12 GB of it; every other run type keeps its previous behaviour.
+        save_best_loss=not FULL_FINETUNE,
     )
     # Say it out loud. The whole point of accumulation is that the effective
     # batch is unchanged while the physical one shrinks to fit VRAM, and a run
