@@ -170,3 +170,77 @@ def test_a_checkpoint_round_trip_restores_the_stream(tmp_path) -> None:
     assert "rng" in payload, "last.pt carries no RNG state; resume cannot be exact"
     assert _restore_rng_state(payload["rng"]) == []
     assert [_draw() for _ in range(4)] == expected
+
+
+# --- the scheduler ---------------------------------------------------------
+# A second, worse resume bug found the same way. Trainer.resume() restored
+# model, optimizer, scaler and RNG but not the scheduler -- it could not,
+# because the scheduler needs steps_per_epoch and is built in fit(), which runs
+# AFTER resume(). So the learning-rate schedule restarted from step zero at
+# every resume: a run interrupted at epoch 2 of 20 re-ran warmup and then
+# followed a cosine two epochs behind the intended one. It completed,
+# registered COMPLETE, and only the per-epoch lr in the log gave it away.
+
+def test_resume_stashes_scheduler_state_for_fit() -> None:
+    """The state must survive resume() even though the scheduler is None then."""
+    source = (ROOT / "src" / "training" / "trainer.py").read_text(encoding="utf-8")
+    assert "_pending_scheduler_state" in source, (
+        "resume() drops the scheduler state entirely")
+    assert 'self._pending_scheduler_state = payload.get("scheduler")' in source, (
+        "resume() does not stash the saved scheduler state")
+    assert "self.scheduler.load_state_dict(self._pending_scheduler_state)" in source, (
+        "fit() never applies the stashed scheduler state")
+
+
+def test_a_restored_scheduler_continues_the_schedule() -> None:
+    """The property: lr after a resume equals lr in an uninterrupted run."""
+    from src.training.trainer import TrainConfig, _build_optimizer, _build_scheduler
+    from torch import nn
+
+    config = TrainConfig(epochs=20, batch_size=16, learning_rate=1e-4,
+                         warmup_epochs=1, scheduler="cosine")
+    steps = 100
+
+    def fresh():
+        model = nn.Linear(4, 2)
+        optimizer = _build_optimizer(model, config)
+        return optimizer, _build_scheduler(optimizer, config, steps)
+
+    # Uninterrupted: step through two epochs' worth.
+    opt_a, sched_a = fresh()
+    for _ in range(2 * steps):
+        opt_a.step()
+        sched_a.step()
+    uninterrupted_lr = opt_a.param_groups[0]["lr"]
+
+    # Interrupted at the same point, state saved and restored into a new one.
+    opt_b, sched_b = fresh()
+    for _ in range(2 * steps):
+        opt_b.step()
+        sched_b.step()
+    saved = sched_b.state_dict()
+
+    opt_c, sched_c = fresh()
+    sched_c.load_state_dict(saved)
+    # load_state_dict restores last_epoch but leaves the optimizer's lr alone --
+    # torch recomputes it on the next step(). fit() therefore writes _last_lr
+    # back explicitly, and this mirrors that.
+    for group, lr in zip(opt_c.param_groups, sched_c._last_lr):
+        group["lr"] = lr
+    resumed_lr = opt_c.param_groups[0]["lr"]
+
+    assert resumed_lr == pytest.approx(uninterrupted_lr), (
+        f"resumed lr {resumed_lr:.3e} != uninterrupted {uninterrupted_lr:.3e}")
+
+    # And the bug it replaces: a scheduler that was never restored sits at the
+    # start of warmup, two orders of magnitude away.
+    opt_d, _ = fresh()
+    assert opt_d.param_groups[0]["lr"] != pytest.approx(uninterrupted_lr), (
+        "the test cannot tell a restored scheduler from a fresh one")
+
+
+def test_fit_writes_the_restored_lr_back_to_the_optimizer() -> None:
+    source = (ROOT / "src" / "training" / "trainer.py").read_text(encoding="utf-8")
+    assert '_last_lr' in source and 'group["lr"] = lr' in source, (
+        "fit() restores the scheduler but never applies its lr, so the first "
+        "step after a resume runs at the fresh warmup rate")

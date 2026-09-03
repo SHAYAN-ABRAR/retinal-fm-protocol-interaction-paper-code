@@ -323,6 +323,9 @@ class Trainer:
         self.optimizer = _build_optimizer(self.model, config)
         self.scaler = torch.amp.GradScaler("cuda", enabled=config.amp and str(device) != "cpu")
         self.scheduler = None       # built in fit(), needs steps_per_epoch
+        # Set by resume() when a checkpoint carries scheduler state, applied
+        # in fit() once the scheduler exists. See resume() for why.
+        self._pending_scheduler_state = None
 
     # -- resume -----------------------------------------------------------
 
@@ -337,6 +340,18 @@ class Trainer:
             path, model=self.model, optimizer=self.optimizer, scaler=self.scaler,
             map_location=self.device, restore_rng=True,
         )
+        # The scheduler cannot be restored here: it does not exist yet. It needs
+        # steps_per_epoch, so fit() builds it -- and fit() runs after resume().
+        # The state is therefore stashed and applied in fit() the moment the
+        # scheduler exists.
+        #
+        # Without this the learning-rate schedule restarted from step zero at
+        # every resume: a run interrupted at epoch 2 of 20 re-ran warmup and
+        # then followed a cosine two epochs behind the one it was supposed to
+        # follow. The run completed, registered COMPLETE and looked entirely
+        # normal. Only the per-epoch lr in the log gave it away
+        # (7.04e-05 at epoch 9 where every uninterrupted run has 5.46e-05).
+        self._pending_scheduler_state = payload.get("scheduler")
         self.start_epoch = int(payload.get("epoch", -1)) + 1
         self.global_step = int(payload.get("global_step", 0))
         # Restore what "best" meant before the interruption, or the first epoch
@@ -474,6 +489,23 @@ class Trainer:
         """Train with early stopping and checkpointing. Returns the history."""
         steps_per_epoch = max(1, len(train_loader) // max(1, self.config.accumulation_steps))
         self.scheduler = _build_scheduler(self.optimizer, self.config, steps_per_epoch)
+        if self._pending_scheduler_state is not None and self.scheduler is not None:
+            self.scheduler.load_state_dict(self._pending_scheduler_state)
+            # load_state_dict restores last_epoch but does NOT write the learning
+            # rate back onto the optimizer -- torch recomputes it on the next
+            # step(). Without this the first optimizer step after a resume runs
+            # at the *fresh* scheduler's warmup rate, and the lr recorded for
+            # that epoch is wrong, which is exactly the signal used to detect
+            # this class of bug in the first place.
+            last_lr = getattr(self.scheduler, "_last_lr", None)
+            if last_lr:
+                for group, lr in zip(self.optimizer.param_groups, last_lr):
+                    group["lr"] = lr
+            self._pending_scheduler_state = None
+            log.info(
+                "restored scheduler state: resuming the learning-rate "
+                "schedule at step %d, lr %.2e",
+                self.global_step, self.optimizer.param_groups[0]["lr"])
 
         full_config = {**self.config.describe(), **self.extra_config}
         log.info(

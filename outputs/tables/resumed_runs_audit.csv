@@ -1,0 +1,8 @@
+experiment_id,resumed_at_epoch,epochs_after_resume,corrupted_epochs
+lodo_ddr-eyepacs-idrid__aptos_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s42,18,2,2
+lodo_ddr-eyepacs-idrid__aptos_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s2,15,5,5
+lodo_aptos-eyepacs-idrid__ddr_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s3,19,1,1
+lodo_aptos-eyepacs-idrid__ddr_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s4,18,2,2
+lodo_aptos-ddr-eyepacs__idrid_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s3,2,18,17
+lodo_aptos-eyepacs-idrid__ddr_retfound-cfp_erm-b16-ftfull-lr0.0001_s2,2,8,7
+lodo_aptos-eyepacs-idrid__ddr_densenet121_mixstyle-b32_s1,9,12,12
