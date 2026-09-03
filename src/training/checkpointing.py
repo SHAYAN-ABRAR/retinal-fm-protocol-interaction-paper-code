@@ -59,19 +59,66 @@ def _rng_state() -> dict[str, Any]:
     return state
 
 
-def _restore_rng_state(state: dict[str, Any]) -> None:
+def _as_byte_tensor(value: Any) -> Any:
+    """A CPU uint8 tensor, which is the only thing set_rng_state accepts.
+
+    ``load_checkpoint`` is called with ``map_location="cuda"``, so every tensor
+    in the payload -- including the saved RNG state -- arrives on the device.
+    ``torch.set_rng_state`` rejects that with "RNG state must be a
+    torch.ByteTensor", and because the restore was wrapped in a single
+    try/except the run continued with an *unrestored* data-ordering and
+    augmentation stream. It resumed happily and was no longer reproducible from
+    its seed, which on this machine matters: load shedding makes resumes
+    routine, so every interrupted run was silently losing its stream.
+    """
+    tensor = value
+    if hasattr(tensor, "detach"):
+        tensor = tensor.detach()
+    if hasattr(tensor, "cpu"):
+        tensor = tensor.cpu()
+    if hasattr(tensor, "to") and getattr(tensor, "dtype", None) is not torch.uint8:
+        tensor = tensor.to(torch.uint8)
+    return tensor
+
+
+def _restore_rng_state(state: dict[str, Any]) -> list[str]:
+    """Restore each stream independently; return the names that failed.
+
+    Independently, because one try/except around all four meant a failure in
+    the third skipped the fourth, and the warning could not say which stream was
+    lost. "CUDA RNG unavailable on this box" and "the torch CPU stream did not
+    restore" have very different consequences for reproducibility and must not
+    look the same in a log.
+    """
     import random
 
     import numpy as np
 
-    try:
-        random.setstate(state["python"])
-        np.random.set_state(state["numpy"])
-        torch.set_rng_state(state["torch"].cpu() if hasattr(state["torch"], "cpu") else state["torch"])
-        if "cuda" in state and torch.cuda.is_available():
-            torch.cuda.set_rng_state_all(state["cuda"])
-    except Exception as exc:  # noqa: BLE001 - a resume must not die over RNG state
-        log.warning("could not fully restore RNG state: %s", exc)
+    failed: list[str] = []
+
+    def attempt(name: str, restore) -> None:
+        try:
+            restore()
+        except Exception as exc:  # noqa: BLE001 - a resume must not die over RNG
+            failed.append(name)
+            log.warning("could not restore %s RNG state: %s", name, exc)
+
+    if "python" in state:
+        attempt("python", lambda: random.setstate(state["python"]))
+    if "numpy" in state:
+        attempt("numpy", lambda: np.random.set_state(state["numpy"]))
+    if "torch" in state:
+        attempt("torch", lambda: torch.set_rng_state(_as_byte_tensor(state["torch"])))
+    if "cuda" in state and torch.cuda.is_available():
+        attempt("cuda", lambda: torch.cuda.set_rng_state_all(
+            [_as_byte_tensor(t) for t in state["cuda"]]))
+
+    if failed:
+        log.warning(
+            "resume is NOT reproducible from its seed: %s stream(s) were not "
+            "restored, so data ordering and augmentation diverge from an "
+            "uninterrupted run", ", ".join(failed))
+    return failed
 
 
 def save_checkpoint(
