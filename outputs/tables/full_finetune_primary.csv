@@ -1,0 +1,3 @@
+analysis,protocol,metric,n_seeds,n_test,mean,seed_sd,ci_lower,ci_upper,p_ttest,p_signflip,sign_agreement,min_attainable_signflip_p
+primary_model_comparison,full,qwk,5,12424,-0.04391244423478653,0.04672130010410063,-0.08605095324159591,-0.01025336502143337,0.10346194386212988,0.125,4,0.0625
+primary_interaction_full_vs_frozen,full-frozen,qwk,5,12424,-0.11408615344658493,0.049262242418405856,-0.1548486033548663,-0.07276095560932473,0.006613156501803616,0.0625,5,0.0625
