@@ -165,8 +165,16 @@ well-matched to both initialisations**, and that belongs in the limitations: a
 budget tuned per model would be a different (also legitimate) experiment, and
 this one deliberately holds adaptation fixed instead.
 
-Neither arm is truncated: ImageNet-MAE peaks at 16–19 of 20 and then declines
-with rising validation loss; RETFound stops early by its own criterion.
+**RETFound is clearly not budget-truncated:** all five runs peak earlier and
+early-stop. **ImageNet-MAE peaks before the final epoch in three seeds but at
+the final epoch in two seeds** (best epochs 16, 18, 16, 19, 19 under a
+20-epoch budget indexed 0–19); residual optimization-budget sensitivity
+therefore cannot be excluded.
+
+This does not weaken the design. It is a **matched fixed-budget** experiment,
+not a claim that either model was individually hyperparameter-optimal, and the
+budget was fixed before any target result was seen. No DDR target result was
+used to justify changing it.
 
 ## 7. Cost and integrity
 

@@ -244,3 +244,125 @@ def test_fit_writes_the_restored_lr_back_to_the_optimizer() -> None:
     assert '_last_lr' in source and 'group["lr"] = lr' in source, (
         "fit() restores the scheduler but never applies its lr, so the first "
         "step after a resume runs at the fresh warmup rate")
+
+
+# --- optimizer, scaler, and end-to-end equivalence -------------------------
+# The tests above assert the keys are present in last.pt. Presence is not
+# restoration: a checkpoint can carry an optimizer state dict that is never
+# loaded, or loaded into the wrong object, and still pass a key check. These
+# assert the values actually come back.
+
+def test_optimizer_moments_are_restored_by_value(tmp_path) -> None:
+    from torch import nn
+
+    from src.training.checkpointing import load_checkpoint, save_checkpoint
+
+    torch.manual_seed(5)
+    model = nn.Linear(6, 3)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+    for _ in range(3):                       # build non-trivial moments
+        model(torch.randn(8, 6)).sum().backward()
+        optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
+    expected = {i: {k: v.clone() for k, v in s.items() if torch.is_tensor(v)}
+                for i, s in optimizer.state_dict()["state"].items()}
+    assert expected, "fixture built no optimizer state"
+
+    path = save_checkpoint(tmp_path / "last.pt", model=model,
+                           optimizer=optimizer, epoch=2)
+
+    fresh_model = nn.Linear(6, 3)
+    fresh = torch.optim.AdamW(fresh_model.parameters(), lr=1e-4)
+    load_checkpoint(path, model=fresh_model, optimizer=fresh, map_location="cpu")
+
+    restored = fresh.state_dict()["state"]
+    assert set(restored) == set(expected), "optimizer state keys differ"
+    for index, tensors in expected.items():
+        for name, value in tensors.items():
+            assert torch.allclose(restored[index][name], value), (
+                f"optimizer moment {name} for param {index} was not restored")
+
+
+def test_amp_scaler_scale_is_restored_by_value(tmp_path) -> None:
+    """A scaler reset to its default restarts loss scaling mid-run."""
+    from torch import nn
+
+    from src.training.checkpointing import load_checkpoint, save_checkpoint
+
+    # A *disabled* scaler has an empty state_dict, so it cannot demonstrate
+    # anything. Training enables AMP whenever CUDA is present, which is the
+    # configuration that matters.
+    if not torch.cuda.is_available():
+        pytest.skip("AMP scaler state only exists with CUDA")
+
+    scaler = torch.amp.GradScaler("cuda", enabled=True)
+    state = scaler.state_dict()
+    default_scale = state["scale"]
+    state["scale"] = default_scale / 8.0     # distinct from the default
+    scaler.load_state_dict(state)
+
+    path = save_checkpoint(tmp_path / "last.pt", model=nn.Linear(2, 2),
+                           scaler=scaler, epoch=1)
+
+    fresh = torch.amp.GradScaler("cuda", enabled=True)
+    assert fresh.state_dict()["scale"] == default_scale, "fixture assumption"
+    load_checkpoint(path, model=nn.Linear(2, 2), scaler=fresh,
+                    map_location="cpu")
+    assert fresh.state_dict()["scale"] == default_scale / 8.0, (
+        "scaler scale was not restored; a resumed run would restart loss "
+        "scaling from the default mid-training")
+
+
+def test_resume_equivalence_end_to_end(tmp_path) -> None:
+    """An interrupted-and-resumed run must land where an uninterrupted one does.
+
+    The whole point, exercised through save_checkpoint/load_checkpoint plus the
+    RNG and scheduler restores, rather than through any single component.
+    """
+    from torch import nn
+
+    from src.training.checkpointing import load_checkpoint, save_checkpoint
+    from src.training.trainer import TrainConfig, _build_optimizer, _build_scheduler
+
+    config = TrainConfig(epochs=6, batch_size=4, learning_rate=1e-3,
+                         warmup_epochs=1, scheduler="cosine")
+    steps = 10
+
+    def build(seed):
+        torch.manual_seed(seed)
+        model = nn.Linear(4, 2)
+        optimizer = _build_optimizer(model, config)
+        return model, optimizer, _build_scheduler(optimizer, config, steps)
+
+    def train_steps(model, optimizer, scheduler, n):
+        for _ in range(n):
+            x = torch.randn(4, 4)
+            model(x).sum().backward()
+            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+            scheduler.step()
+
+    # Uninterrupted: 30 steps straight through.
+    random.seed(1); np.random.seed(1)
+    model_a, opt_a, sched_a = build(1)
+    train_steps(model_a, opt_a, sched_a, 30)
+
+    # Interrupted after 12, checkpointed, restored, then the remaining 18.
+    random.seed(1); np.random.seed(1)
+    model_b, opt_b, sched_b = build(1)
+    train_steps(model_b, opt_b, sched_b, 12)
+    path = save_checkpoint(tmp_path / "last.pt", model=model_b,
+                           optimizer=opt_b, scheduler=sched_b, epoch=1)
+
+    model_c, opt_c, sched_c = build(999)      # deliberately different init
+    payload = load_checkpoint(path, model=model_c, optimizer=opt_c,
+                              scheduler=sched_c, map_location="cpu",
+                              restore_rng=True)
+    for group, lr in zip(opt_c.param_groups, sched_c._last_lr):
+        group["lr"] = lr
+    train_steps(model_c, opt_c, sched_c, 18)
+
+    assert payload["epoch"] == 1
+    for name, value in model_a.state_dict().items():
+        assert torch.allclose(model_c.state_dict()[name], value, atol=1e-6), (
+            f"{name} diverged between the uninterrupted and resumed runs")
