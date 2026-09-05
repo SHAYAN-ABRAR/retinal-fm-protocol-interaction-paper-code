@@ -26,3 +26,11 @@ model was trained on the wrong schedule.
 Detected by `audit_resumed_runs.py`, which reconstructs each run's intended
 cosine from its own config and compares it epoch by epoch against the learning
 rate actually used.
+
+### lodo_aptos-eyepacs-idrid__ddr_densenet121_mixstyle-b32_s1
+
+Same defect. Interrupted at epoch 9 of 20, so the learning-rate schedule
+restarted from step zero and the remaining twelve epochs ran on the wrong
+schedule. The selected checkpoint was epoch 17, well after the resume, so the
+reported model was trained on the corrupted schedule. Feeds the DG method
+comparison on DDR.
