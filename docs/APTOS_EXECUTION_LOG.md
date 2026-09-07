@@ -100,6 +100,41 @@ than 1800 s while more than 1000 MiB of VRAM is held and the GPU is under 20%,
 which is the conjunction that distinguishes this deadlock from a long epoch.
 It is what caught the seed-1 occurrence.
 
+## A restarted run is not bit-identical to the run it replaces
+
+The seed-1 RETFound restart gave a direct measurement of this, because the
+abandoned execution and its replacement ran the identical command, at the
+identical seed, both from scratch. Their first epochs differ:
+
+| execution | epoch 0 train loss | epoch 0 val loss | epoch 0 val QWK |
+|---|---|---|---|
+| abandoned (standby deadlock) | 0.7844 | 0.7055 | 0.6055 |
+| replacement | 0.7856 | 0.6955 | 0.6244 |
+
+(Source-validation figures. The target is not involved.)
+
+This is expected and is recorded per run: `run_lodo.py:383` sets
+`deterministic: False`, so `src/utils/seed.py` leaves
+`torch.backends.cudnn.benchmark = True` and deterministic algorithms off. cuDNN
+autotunes kernel selection, and with AMP and gradient checkpointing the
+reduction order is not fixed. The registry carries `deterministic = False` on
+every full-FT row, so the runs do not claim bit-exact reproducibility and none
+is implied anywhere.
+
+What it means, stated plainly:
+
+- **"Seed 1" is not a bit-reproducible label.** Re-running the same command
+  gives a nearby but different draw. Reproducing this study reproduces the
+  *distribution* over seeds, not the individual numbers.
+- **It does not bias the comparison.** Both initialisations run under the same
+  setting, on the same seeds, on the same images, and the analysis is paired at
+  seed level within each protocol — so kernel non-determinism enters both arms
+  identically and cannot produce a difference between them.
+- **It does inflate the seed-level SD slightly.** The five-seed spread contains
+  both genuine seed-to-seed variation and this run-to-run jitter. Since the
+  inference is a paired test on per-seed differences, that makes the intervals
+  marginally wider, which is conservative rather than favourable.
+
 ## Storage
 
 Full fine-tuning writes a 1.21 GB `best_qwk.pt` and a 3.64 GB `last.pt` per
