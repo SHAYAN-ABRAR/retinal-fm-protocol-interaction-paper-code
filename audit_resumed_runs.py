@@ -53,6 +53,17 @@ def main() -> int:
     from src.utils.io import project_root
 
     outputs = project_root() / "outputs"
+
+    # best_epoch and epochs_planned per run, from the registry. These are the
+    # authority on what the run as a whole did; a resumed run's history file
+    # describes only its final execution.
+    from src.utils.registry import latest_per_experiment
+    registry_frame = pd.read_csv(outputs / "experiment_registry.csv")
+    registry_frame = latest_per_experiment(registry_frame)
+    registry = {str(r.experiment_id): r.best_epoch
+                for _, r in registry_frame.iterrows()}
+    planned = {str(r.experiment_id): r.epochs_planned
+               for _, r in registry_frame.iterrows()}
     logs = sorted((outputs / "logs").glob("*.log"))
 
     epoch_line = re.compile(
@@ -177,17 +188,45 @@ def main() -> int:
                 # source-validation QWK, so a run whose best epoch predates its
                 # resume reports a model trained entirely on the correct
                 # schedule. That distinction decides whether a re-run is needed.
-                best_epoch, reaches_model = None, True
-                history = outputs / "logs" / f"{experiment_id}_history.csv"
-                if history.exists():
-                    try:
-                        frame_h = pd.read_csv(history)
-                        best_epoch = int(frame_h.val_qwk.idxmax())
-                        reaches_model = best_epoch >= start
-                    except Exception:                  # noqa: BLE001
-                        pass
+                #
+                # The best epoch must come from the REGISTRY, not from the
+                # history file. A resumed run's history is rewritten with only
+                # the epochs of its final execution, so `val_qwk.idxmax()` on it
+                # returns an index into that fragment -- not an epoch number of
+                # the run. Comparing a fragment index against the resume epoch
+                # compares two different quantities, and it fails in the unsafe
+                # direction: a run resumed at epoch 18 whose true best epoch is
+                # 19 yields fragment index 1, and 1 >= 18 is False, so a
+                # genuinely affected run would be cleared. The registry's
+                # best_epoch is tracked across executions by the checkpoint
+                # manager and is the authority. Real instance: the APTOS
+                # partial-FT ImageNet seed 42 run has a two-row history and a
+                # registry best_epoch of 11.
+                n_planned = planned.get(experiment_id)
+                n_planned = (int(n_planned) if n_planned is not None
+                             and n_planned == n_planned else -1)
+                best_epoch, reaches_model, source = None, True, "unknown"
+                record = registry.get(experiment_id)
+                if record is not None and record == record:
+                    best_epoch = int(record)
+                    reaches_model = best_epoch >= start
+                    source = "registry"
+                else:
+                    history = outputs / "logs" / f"{experiment_id}_history.csv"
+                    if history.exists():
+                        try:
+                            frame_h = pd.read_csv(history)
+                            if len(frame_h) == n_planned:
+                                best_epoch = int(frame_h.val_qwk.idxmax())
+                                reaches_model = best_epoch >= start
+                                source = "history (whole run)"
+                            else:
+                                source = (f"history is a {len(frame_h)}-epoch "
+                                          f"fragment; cannot judge")
+                        except Exception:              # noqa: BLE001
+                            pass
                 affected.append((experiment_id, start, len(after), mismatches,
-                                 best_epoch, reaches_model))
+                                 best_epoch, reaches_model, source))
             else:
                 clean.append((experiment_id, start,
                               f"{len(after)} epoch(s) ran, schedule matches"))
@@ -197,13 +236,14 @@ def main() -> int:
     if affected:
         print(f"!! {len(affected)} run(s) trained with a CORRUPTED lr schedule:\n")
         for entry in affected:
-            experiment_id, start, n_after, mismatches, best_epoch, reaches = entry
+            (experiment_id, start, n_after, mismatches, best_epoch, reaches,
+             source) = entry
             verdict = ("REPORTED MODEL AFFECTED -- needs a re-run"
                        if reaches else
                        "reported model UNAFFECTED: best epoch predates the resume")
             print(f"  {experiment_id}")
             print(f"    resumed at epoch {start}; {n_after} training epoch(s) "
-                  f"ran afterwards; best epoch {best_epoch}")
+                  f"ran afterwards; best epoch {best_epoch} [{source}]")
             print(f"    -> {verdict}")
             print(f"    {len(mismatches)} epoch(s) at the wrong learning rate, e.g.:")
             for epoch, actual, expected in mismatches[:2]:
@@ -220,8 +260,8 @@ def main() -> int:
     frame = pd.DataFrame([
         {"experiment_id": e, "resumed_at_epoch": s, "epochs_after_resume": n,
          "corrupted_epochs": len(m), "best_epoch": b,
-         "reported_model_affected": r}
-        for e, s, n, m, b, r in affected
+         "best_epoch_source": src, "reported_model_affected": r}
+        for e, s, n, m, b, r, src in affected
     ])
     if not frame.empty:
         out = outputs / "tables" / "resumed_runs_audit.csv"

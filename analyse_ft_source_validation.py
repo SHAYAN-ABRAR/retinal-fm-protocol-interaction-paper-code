@@ -96,6 +96,20 @@ def main() -> int:
             budget = int(record["epochs_planned"])
 
             best_index = int(history.val_qwk.idxmax())
+            # A resumed run's history holds only the epochs of its final
+            # execution -- `epochs_run` counts that execution, not the run.
+            # Summarising such a file would report the best epoch of a fragment
+            # as the best epoch of the run. Real case in this project: the APTOS
+            # partial-FT ImageNet runs, one of which has a zero-row history and
+            # a registry best_epoch of 13. The registry is the authority, so
+            # disagreement means the history is not a whole record and this
+            # table must not be built from it.
+            if best_index != int(record["best_epoch"]):
+                missing.append(
+                    f"{experiment_id}  (history best epoch {best_index} != "
+                    f"registry best epoch {int(record['best_epoch'])}; the "
+                    f"history is a fragment, most likely post-resume)")
+                continue
             val_loss_min = float(history.val_loss.min())
             val_loss_final = float(history.val_loss.iloc[-1])
             rows.append({

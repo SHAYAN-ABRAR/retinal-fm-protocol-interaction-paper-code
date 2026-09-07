@@ -1,5 +1,5 @@
-experiment_id,resumed_at_epoch,epochs_after_resume,corrupted_epochs,best_epoch,reported_model_affected
-lodo_aptos-eyepacs-idrid__ddr_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s3,19,1,1,0,False
-lodo_aptos-eyepacs-idrid__ddr_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s4,18,2,2,1,False
-lodo_ddr-eyepacs-idrid__aptos_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s42,18,2,2,0,False
-lodo_ddr-eyepacs-idrid__aptos_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s2,15,5,5,2,False
+experiment_id,resumed_at_epoch,epochs_after_resume,corrupted_epochs,best_epoch,best_epoch_source,reported_model_affected
+lodo_aptos-eyepacs-idrid__ddr_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s3,19,1,1,12,registry,False
+lodo_aptos-eyepacs-idrid__ddr_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s4,18,2,2,12,registry,False
+lodo_ddr-eyepacs-idrid__aptos_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s42,18,2,2,11,registry,False
+lodo_ddr-eyepacs-idrid__aptos_vit-large-mae-in1k_erm-b16-tb4-lr0.0001_s2,15,5,5,14,registry,False
