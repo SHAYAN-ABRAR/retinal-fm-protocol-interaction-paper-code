@@ -1,4 +1,4 @@
-"""Every number in the full-FT report must exist in a generator CSV.
+"""Every number in a results report must exist in a generator CSV.
 
 Written because it happened: the first draft of
 ``docs/FULL_FINETUNE_FINAL_REPORT.md`` had the per-seed QWK values for seeds 1,
@@ -7,8 +7,13 @@ Written because it happened: the first draft of
 internally consistent and nothing downstream complained. Only a diff against
 the CSV found it.
 
-``paper/check_numbers.py`` does this for the manuscript. The report needed the
-same gate, because the report is what the manuscript will be written from.
+``paper/check_numbers.py`` does this for the manuscript. The reports needed the
+same gate, because the reports are what the manuscript is written from.
+
+Each report declares the generator tables it is allowed to draw from. A report
+that has not been written yet is skipped and said to be skipped; a report that
+exists must have every one of its generator tables present, and every
+four-decimal value in it must appear in one of them.
 
 Exit code is non-zero on any unsupported value.
 
@@ -23,14 +28,35 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-REPORT = ROOT / "docs" / "FULL_FINETUNE_FINAL_REPORT.md"
-SOURCES = [
-    "full_finetune_per_seed.csv",
-    "full_finetune_primary.csv",
-    "full_finetune_secondary_interactions.csv",
-    "full_finetune_secondary_outcomes.csv",
-    "full_finetune_source_validation.csv",
-    "ft_convergence_source_validation.csv",
+
+REPORTS = [
+    {
+        "report": ROOT / "docs" / "FULL_FINETUNE_FINAL_REPORT.md",
+        "sources": [
+            "full_finetune_per_seed.csv",
+            "full_finetune_primary.csv",
+            "full_finetune_secondary_interactions.csv",
+            "full_finetune_secondary_outcomes.csv",
+            "full_finetune_source_validation.csv",
+            "ft_convergence_source_validation.csv",
+        ],
+    },
+    {
+        # The APTOS replication. It quotes the frozen DDR interaction as well
+        # as its own numbers, because the two form one primary family, so the
+        # DDR generator table is a legitimate source for it.
+        "report": ROOT / "docs" / "APTOS_FULL_FINETUNE_FINAL_REPORT.md",
+        "sources": [
+            "aptos_full_finetune_per_seed.csv",
+            "aptos_full_finetune_primary.csv",
+            "aptos_adaptation_depth.csv",
+            "aptos_secondary_outcomes.csv",
+            "aptos_full_finetune_source_validation.csv",
+            "two_domain_interaction_holm.csv",
+            "figure_qwk_by_domain_protocol_seed.csv",
+            "full_finetune_primary.csv",
+        ],
+    },
 ]
 
 # Values that are design facts or derived in one line, not measurements.
@@ -40,16 +66,12 @@ DERIVED = {
 }
 
 
-def main() -> int:
+def check(report: Path, sources: list[str]) -> int:
     import pandas as pd
-
-    if not REPORT.exists():
-        print(f"no report at {REPORT}")
-        return 1
 
     supported: set[str] = set()
     tables = ROOT / "outputs" / "tables"
-    for name in SOURCES:
+    for name in sources:
         path = tables / name
         if not path.exists():
             print(f"NOT RUN -- {name} missing")
@@ -62,7 +84,7 @@ def main() -> int:
                         supported.add(f"{abs(float(value)):.{decimals}f}")
                         supported.add(f"{float(value):.{decimals}f}")
 
-    text = REPORT.read_text(encoding="utf-8")
+    text = report.read_text(encoding="utf-8")
     # Strip code spans and the bug-history section, which quote historical
     # values deliberately and are not claims about this result set.
     text = re.sub(r"`[^`]*`", "", text)
@@ -70,30 +92,47 @@ def main() -> int:
     quoted = set(re.findall(r"(?<![\w.])\d\.\d{4}(?![\w])", text))
     unsupported = sorted(quoted - supported - DERIVED)
 
-    print(f"{len(quoted)} four-decimal value(s) in the report, "
-          f"{len(supported)} distinct values available across "
-          f"{len(SOURCES)} generator table(s)")
+    print(f"  {len(quoted)} four-decimal value(s), {len(supported)} distinct "
+          f"values available across {len(sources)} generator table(s)")
 
     if unsupported:
-        print(f"\n!! {len(unsupported)} value(s) match no generator table:")
-        lines = REPORT.read_text(encoding="utf-8").splitlines()
+        print(f"\n  !! {len(unsupported)} value(s) match no generator table:")
+        lines = report.read_text(encoding="utf-8").splitlines()
         for value in unsupported:
             for line_number, line in enumerate(lines, 1):
                 if value in line:
-                    # The report uses U+2212 MINUS and other typographic
+                    # The reports use U+2212 MINUS and other typographic
                     # characters that a cp1252 console cannot encode; the
                     # checker must report the problem, not die trying to.
                     excerpt = line.strip()[:80].encode(
                         sys.stdout.encoding or "utf-8", "replace").decode(
                         sys.stdout.encoding or "utf-8", "replace")
-                    print(f"  {value}  line {line_number}: {excerpt}")
+                    print(f"    {value}  line {line_number}: {excerpt}")
                     break
             else:
-                print(f"  {value}  (no line found)")
+                print(f"    {value}  (no line found)")
         return 1
 
-    print("every four-decimal value in the report traces to a generator table")
+    print("  every four-decimal value traces to a generator table")
     return 0
+
+
+def main() -> int:
+    failures, checked = 0, 0
+    for spec in REPORTS:
+        report = spec["report"]
+        if not report.exists():
+            print(f"{report.name}: not written yet -- skipped")
+            continue
+        print(f"{report.name}:")
+        checked += 1
+        failures += check(report, spec["sources"])
+
+    if not checked:
+        print("\nno reports found to check")
+        return 1
+    print(f"\n{checked} report(s) checked, {failures} failing")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
