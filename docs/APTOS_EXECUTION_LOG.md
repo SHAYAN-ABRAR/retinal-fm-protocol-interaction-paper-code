@@ -40,8 +40,8 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 2 | RETFound | 42 | COMPLETE | 2026-09-07 03:12 | 14/20 (early stop) | 4.06 h |
 | 3 | ImageNet-MAE | 1 | COMPLETE | 2026-09-07 09:02 | 20/20 | 5.77 h |
 | 4 | RETFound | 1 | COMPLETE | 2026-09-08 06:58 | 19/20 (early stop) | 5.51 h |
-| 5 | ImageNet-MAE | 2 | RUNNING | started 2026-09-08 22:18 | — | — |
-| 6 | RETFound | 2 | NOT RUN | | | |
+| 5 | ImageNet-MAE | 2 | COMPLETE | 2026-09-09 04:10 | 20/20 | 5.85 h |
+| 6 | RETFound | 2 | RUNNING | started 2026-09-09 04:11 | — | — |
 | 7 | ImageNet-MAE | 3 | NOT RUN | | | |
 | 8 | RETFound | 3 | NOT RUN | | | |
 | 9 | ImageNet-MAE | 4 | NOT RUN | | | |
