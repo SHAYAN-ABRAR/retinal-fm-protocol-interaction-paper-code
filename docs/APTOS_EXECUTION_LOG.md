@@ -40,7 +40,7 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 2 | RETFound | 42 | COMPLETE | 2026-09-07 03:12 | 14/20 (early stop) | 4.06 h |
 | 3 | ImageNet-MAE | 1 | COMPLETE | 2026-09-07 09:02 | 20/20 | 5.77 h |
 | 4 | RETFound | 1 | COMPLETE | 2026-09-08 06:58 | 19/20 (early stop) | 5.51 h |
-| 5 | ImageNet-MAE | 2 | RUNNING | started 2026-09-08 07:01 | — | — |
+| 5 | ImageNet-MAE | 2 | NOT RUN | | | |
 | 6 | RETFound | 2 | NOT RUN | | | |
 | 7 | ImageNet-MAE | 3 | NOT RUN | | | |
 | 8 | RETFound | 3 | NOT RUN | | | |
@@ -64,8 +64,9 @@ is retained under a name recording its fate.
 | `ft_aptos_retfound_s42_hung_standby_2307.log` | 8 | 2026-09-06 21:52 | Modern Standby deadlock |
 | `ft_aptos_retfound_s1_stopped_at_pause.log` | 0 | 2026-09-07 09:05 | stopped at an operator pause |
 | `ft_aptos_retfound_s1_hung_standby_2042.log` | 4 | 2026-09-07 20:42 | Modern Standby deadlock |
+| `ft_aptos_imagenet_s2_stopped_at_pause.log` | 7 | 2026-09-08 09:02 | stopped at an operator pause |
 
-**No execution was ever abandoned because of what it showed.** Two were
+**No execution was ever abandoned because of what it showed.** Three were
 operator pauses and two were the same platform fault. The protocol's rule
 stands: a run is re-run only for a demonstrated implementation fault or an
 interruption, never because a result is inconvenient.
