@@ -41,16 +41,17 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 3 | ImageNet-MAE | 1 | COMPLETE | 2026-09-07 09:02 | 20/20 | 5.77 h |
 | 4 | RETFound | 1 | COMPLETE | 2026-09-08 06:58 | 19/20 (early stop) | 5.51 h |
 | 5 | ImageNet-MAE | 2 | COMPLETE | 2026-09-09 04:10 | 20/20 | 5.85 h |
-| 6 | RETFound | 2 | RUNNING | started 2026-09-09 19:08 | — | — |
-| 7 | ImageNet-MAE | 3 | NOT RUN | | | |
+| 6 | RETFound | 2 | COMPLETE | 2026-09-09 23:32 | 15/20 (early stop) | 4.37 h |
+| 7 | ImageNet-MAE | 3 | RUNNING | started 2026-09-09 23:33 | — | — |
 | 8 | RETFound | 3 | NOT RUN | | | |
 | 9 | ImageNet-MAE | 4 | NOT RUN | | | |
 | 10 | RETFound | 4 | NOT RUN | | | |
 
-Early stopping is on **source**-validation QWK with patience 6. Runs 2 and 4
-stopping at 14 and 19 epochs is the recipe behaving as specified, not an
-intervention: both are RETFound runs, and RETFound early-stopped in all five
-DDR runs while ImageNet-MAE early-stopped in none. Nothing about the budget,
+Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4 and 6
+stopping at 14, 19 and 15 epochs is the recipe behaving as specified, not an
+intervention: all three are RETFound runs, and RETFound early-stopped in all
+five DDR runs while ImageNet-MAE early-stopped in none and has now run the full
+budget in all three APTOS runs too. Nothing about the budget,
 the patience or the schedule was changed for either.
 
 ## Abandoned executions
