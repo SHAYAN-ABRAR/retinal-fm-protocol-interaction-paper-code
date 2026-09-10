@@ -44,7 +44,7 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 6 | RETFound | 2 | COMPLETE | 2026-09-09 23:32 | 15/20 (early stop) | 4.37 h |
 | 7 | ImageNet-MAE | 3 | COMPLETE | 2026-09-10 05:23 | 20/20 | 5.82 h |
 | 8 | RETFound | 3 | COMPLETE | 2026-09-10 09:29 | 14/20 (early stop) | 4.05 h |
-| 9 | ImageNet-MAE | 4 | RUNNING | started 2026-09-10 09:30 | — | — |
+| 9 | ImageNet-MAE | 4 | NOT RUN | | | |
 | 10 | RETFound | 4 | NOT RUN | | | |
 
 Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6 and
@@ -68,8 +68,9 @@ is retained under a name recording its fate.
 | `ft_aptos_retfound_s1_hung_standby_2042.log` | 4 | 2026-09-07 20:42 | Modern Standby deadlock |
 | `ft_aptos_imagenet_s2_stopped_at_pause.log` | 7 | 2026-09-08 09:02 | stopped at an operator pause |
 | `ft_aptos_retfound_s2_stopped_at_pause.log` | 15 | 2026-09-09 08:34 | stopped at an operator pause |
+| `ft_aptos_imagenet_s4_stopped_at_pause.log` | 0 | 2026-09-10 09:36 | stopped at an operator pause |
 
-**No execution was ever abandoned because of what it showed.** Four were
+**No execution was ever abandoned because of what it showed.** Five were
 operator pauses and two were the same platform fault. The protocol's rule
 stands: a run is re-run only for a demonstrated implementation fault or an
 interruption, never because a result is inconvenient.
