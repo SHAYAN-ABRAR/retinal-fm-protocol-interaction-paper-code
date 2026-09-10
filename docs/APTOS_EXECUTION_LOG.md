@@ -44,7 +44,7 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 6 | RETFound | 2 | COMPLETE | 2026-09-09 23:32 | 15/20 (early stop) | 4.37 h |
 | 7 | ImageNet-MAE | 3 | COMPLETE | 2026-09-10 05:23 | 20/20 | 5.82 h |
 | 8 | RETFound | 3 | COMPLETE | 2026-09-10 09:29 | 14/20 (early stop) | 4.05 h |
-| 9 | ImageNet-MAE | 4 | NOT RUN | | | |
+| 9 | ImageNet-MAE | 4 | RUNNING | started 2026-09-10 18:56 | — | — |
 | 10 | RETFound | 4 | NOT RUN | | | |
 
 Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6 and
