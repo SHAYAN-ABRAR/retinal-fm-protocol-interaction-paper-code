@@ -43,15 +43,16 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 5 | ImageNet-MAE | 2 | COMPLETE | 2026-09-09 04:10 | 20/20 | 5.85 h |
 | 6 | RETFound | 2 | COMPLETE | 2026-09-09 23:32 | 15/20 (early stop) | 4.37 h |
 | 7 | ImageNet-MAE | 3 | COMPLETE | 2026-09-10 05:23 | 20/20 | 5.82 h |
-| 8 | RETFound | 3 | RUNNING | started 2026-09-10 05:24 | — | — |
-| 9 | ImageNet-MAE | 4 | NOT RUN | | | |
+| 8 | RETFound | 3 | COMPLETE | 2026-09-10 09:29 | 14/20 (early stop) | 4.05 h |
+| 9 | ImageNet-MAE | 4 | RUNNING | started 2026-09-10 09:30 | — | — |
 | 10 | RETFound | 4 | NOT RUN | | | |
 
-Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4 and 6
-stopping at 14, 19 and 15 epochs is the recipe behaving as specified, not an
-intervention: all three are RETFound runs, and RETFound early-stopped in all
-five DDR runs while ImageNet-MAE early-stopped in none and has now run the full
-budget in all three APTOS runs too. Nothing about the budget,
+Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6 and
+8 stopping at 14, 19, 15 and 14 epochs is the recipe behaving as specified, not
+an intervention: all four are RETFound runs, and RETFound early-stopped in all
+five DDR runs too, while ImageNet-MAE has early-stopped in none of the ten runs
+across either domain and has taken the full 20-epoch budget every time. Nothing
+about the budget, the patience or the schedule was changed for any run. Nothing about the budget,
 the patience or the schedule was changed for either.
 
 ## Abandoned executions
