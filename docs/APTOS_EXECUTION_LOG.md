@@ -50,10 +50,10 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6 and
 8 stopping at 14, 19, 15 and 14 epochs is the recipe behaving as specified, not
 an intervention: all four are RETFound runs, and RETFound early-stopped in all
-five DDR runs too, while ImageNet-MAE has early-stopped in none of the ten runs
-across either domain and has taken the full 20-epoch budget every time. Nothing
-about the budget, the patience or the schedule was changed for any run. Nothing about the budget,
-the patience or the schedule was changed for either.
+five DDR runs too, while ImageNet-MAE has early-stopped in none of its nine
+completed runs across the two domains (five on DDR, four on APTOS) and has taken
+the full 20-epoch budget every time. Nothing about the budget, the patience or
+the schedule was changed for any run.
 
 ## Abandoned executions
 
