@@ -44,8 +44,8 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 6 | RETFound | 2 | COMPLETE | 2026-09-09 23:32 | 15/20 (early stop) | 4.37 h |
 | 7 | ImageNet-MAE | 3 | COMPLETE | 2026-09-10 05:23 | 20/20 | 5.82 h |
 | 8 | RETFound | 3 | COMPLETE | 2026-09-10 09:29 | 14/20 (early stop) | 4.05 h |
-| 9 | ImageNet-MAE | 4 | RUNNING | started 2026-09-11 10:16 | — | — |
-| 10 | RETFound | 4 | NOT RUN | | | |
+| 9 | ImageNet-MAE | 4 | COMPLETE | 2026-09-11 16:09 | 20/20 | 5.86 h |
+| 10 | RETFound | 4 | RUNNING | started 2026-09-11 16:10 | — | — |
 
 Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6 and
 8 stopping at 14, 19, 15 and 14 epochs is the recipe behaving as specified, not
