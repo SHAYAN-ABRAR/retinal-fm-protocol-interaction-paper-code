@@ -5,9 +5,11 @@ requires that any re-run be recorded with its reason. This is that record. It
 covers **execution only**: which processes ran, when, and why any of them was
 abandoned.
 
-**No APTOS target metric appears here, and none has been inspected.** Every
-number below is a wall-clock time, an epoch count, or a source-validation
-budget. Target blindness remains in force until all ten runs exist.
+**No APTOS target metric appears here.** Every number below is a wall-clock
+time, an epoch count, or a source-validation budget. Target blindness held
+throughout execution: the first APTOS full-FT metric was computed on
+2026-09-11, after the tenth run registered. Results are in
+`APTOS_FULL_FINETUNE_FINAL_REPORT.md`.
 
 All times are local (UTC+06:00). Registry timestamps are UTC and are converted
 here.
@@ -45,15 +47,16 @@ Order is the pre-registered one: 42 ImageNet, 42 RETFound, 1 ImageNet,
 | 7 | ImageNet-MAE | 3 | COMPLETE | 2026-09-10 05:23 | 20/20 | 5.82 h |
 | 8 | RETFound | 3 | COMPLETE | 2026-09-10 09:29 | 14/20 (early stop) | 4.05 h |
 | 9 | ImageNet-MAE | 4 | COMPLETE | 2026-09-11 16:09 | 20/20 | 5.86 h |
-| 10 | RETFound | 4 | RUNNING | started 2026-09-11 16:10 | — | — |
+| 10 | RETFound | 4 | COMPLETE | 2026-09-11 21:42 | 19/20 (early stop) | 5.51 h |
 
-Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6 and
-8 stopping at 14, 19, 15 and 14 epochs is the recipe behaving as specified, not
-an intervention: all four are RETFound runs, and RETFound early-stopped in all
-five DDR runs too, while ImageNet-MAE has early-stopped in none of its nine
-completed runs across the two domains (five on DDR, four on APTOS) and has taken
-the full 20-epoch budget every time. Nothing about the budget, the patience or
-the schedule was changed for any run.
+Early stopping is on **source**-validation QWK with patience 6. Runs 2, 4, 6, 8
+and 10 stopping at 14, 19, 15, 14 and 19 epochs is the recipe behaving as
+specified, not an intervention: all five are RETFound runs. Across both domains
+the split is complete -- **10/10 RETFound runs early-stopped and 0/10
+ImageNet-MAE runs did**, ImageNet-MAE taking the full 20-epoch budget every
+time. Nothing about the budget, the patience or the schedule was changed for any
+run, which is what makes this a control rather than a comparison of tuning
+effort.
 
 ## Abandoned executions
 

@@ -1,0 +1,14 @@
+\begin{table}[t]
+\centering
+\caption{Adaptation depth on the held-out APTOS domain: quadratic weighted kappa for the two matched initialisations under each of the three adaptation protocols, mean $\pm$ standard deviation over five seeds, with $\Delta$ the paired ImageNet-MAE minus RETFound difference. Intervals are crossed seed $\times$ case bootstrap intervals and $p$ is an uncorrected paired $t$-test on the five per-seed differences. These three comparisons are descriptive context for the interaction in Table\~\ref{tab:two-domain-interaction} and are not a second family of tests; the pre-specified primary endpoint is the interaction, and no protocol-level comparison here is corrected for or claimed as established on its own.}
+\label{tab:aptos-adaptation-depth}
+\begin{tabular}{lrrrrrr}
+\toprule
+Protocol & ImageNet-MAE & RETFound & $\Delta$ & 95\% CI & sign & $p$ \\
+\midrule
+Frozen linear probe & 0.5872 $\pm$ 0.0564 & 0.4796 $\pm$ 0.0167 & $+0.1075$ & $[+0.0623, +0.1536]$ & 5/5 & 0.0121 \\
+Partial (last 4 blocks) & 0.8334 $\pm$ 0.0169 & 0.8261 $\pm$ 0.0083 & $+0.0073$ & $[-0.0107, +0.0234]$ & 4/5 & 0.4007 \\
+Full fine-tuning & 0.8123 $\pm$ 0.0170 & 0.8040 $\pm$ 0.0121 & $+0.0083$ & $[-0.0095, +0.0258]$ & 4/5 & 0.3489 \\
+\bottomrule
+\end{tabular}
+\end{table}

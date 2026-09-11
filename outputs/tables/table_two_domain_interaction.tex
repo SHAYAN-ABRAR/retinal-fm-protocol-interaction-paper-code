@@ -1,0 +1,13 @@
+\begin{table}[t]
+\centering
+\caption{Primary family: the full-versus-frozen protocol interaction $I_{\text{full}} = (\text{ImageNet}-\text{RETFound})_{\text{full}} - (\text{ImageNet}-\text{RETFound})_{\text{frozen}}$ on the two held-out domains for which matched full fine-tuning was run, over five seeds each. APTOS was a pre-registered confirmatory replication of the DDR result, specified and analysed before any APTOS target metric was inspected. Intervals come from the crossed seed $\times$ case bootstrap and quantify uncertainty only; they are not a test, because the resampling distribution is built around the empirical estimate rather than under the null. $p$ is a paired $t$-test on the five per-seed interactions, Holm-corrected across exactly these two domains, and $p_{\text{flip}}$ is an exact sign-flip permutation check whose smallest attainable two-sided value at five seeds is $0.0625$; it cannot reach conventional significance at this sample size for any effect size and is reported as sensitivity. A domain is treated as established only when the corrected test and the interval agree. No pooled two-domain $p$-value is reported: the two test sets differ in size and in shift structure, so a pooled value would describe neither. The interaction is established on both held-out domains, in the same direction on both.}
+\label{tab:two-domain-interaction}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Held-out & $n_{\text{test}}$ & $I_{\text{full}}$ & 95\% CI & sign & $p$ & $p_{\text{Holm}}$ & $p_{\text{flip}}$ \\
+\midrule
+DDR & 12\,424 & $-0.1141$ & $[-0.1548, -0.0728]$ & 5/5 & 0.0066 & 0.0132 & 0.0625 \\
+APTOS & 3\,504 & $-0.0992$ & $[-0.1595, -0.0397]$ & 5/5 & 0.0370 & 0.0370 & 0.0625 \\
+\bottomrule
+\end{tabular}
+\end{table}
