@@ -1,46 +1,78 @@
-# Open items for the manuscript
+# Manuscript handoff checklist
 
-Status of `paper/main.tex` (draft v0.1). Nothing here is a blocker on the
-science; these are writing and assembly tasks.
+**Replaced 2026-09-11.** The previous contents of this file described
+experiments as "running now" that completed weeks ago (IDRiD fine-tune seeds 3
+and 4; frozen probes seeds 5–9). It was stale enough to mislead anyone
+inferring project status from it, and has been discarded rather than patched.
 
-## Blocked on running experiments
+> **Do not infer current status from any other document in `paper/`.**
+> `paper/main.tex` is historical scaffolding with stale framing and is **not**
+> being patched section by section. The authoritative state is
+> `docs/JBHI_EVIDENCE_FREEZE.md`.
 
-- [ ] **IDRiD fine-tune, seeds 3 and 4** — running now. The Limitations section
-      currently concedes that IDRiD's fine-tuned verdict rests on three seeds,
-      which is the sample size §II-C argues is insufficient. When these land,
-      update Table `finetune_comparison.csv`, Fig. 1, §IV-A and the limitation.
-- [ ] **Frozen probes, seeds 5–9** — queued behind IDRiD. Takes the surviving
-      arm to ten seeds; update §IV-A and Fig. 1.
+## Experiments — ALL COMPLETE, programme CLOSED
 
-## Tables to emit (do not transcribe)
+| item | status |
+|---|---|
+| frozen linear probe, 3 domains × 2 initialisations × 10 seeds | **complete** (60 runs) |
+| partial FT (last 4/24), 3 domains × 2 × 5 seeds | **complete** (30 runs) |
+| full FT, DDR, 2 × 5 seeds | **complete** (10 runs) |
+| full FT, APTOS confirmatory replication, 2 × 5 seeds | **complete** (10 runs) |
+| DG method comparison | complete (supplement) |
+| resolution / batch decomposition | complete (supplement) |
+| calibration, selective prediction | complete (supplement) |
+| **IDRiD full FT** | **will not be run — programme closed** |
+| additional seeds / models / DG methods / hyperparameter search | **will not be run — programme closed** |
 
-- [ ] Table I — dataset characteristics. Exists as
-      `outputs/tables/table1_dataset_characteristics.tex`; wire the input.
-- [ ] Table II — foundation-model comparison, frozen and fine-tuned side by
-      side. **Generator does not exist yet**; add to `export_paper_tables.py`
-      reading `linear_probe_comparison_*.csv` and `finetune_comparison.csv`.
-- [ ] Table III — DG method comparison. Add a generator reading
-      `method_comparison_lodo_{eyepacs,ddr}.csv`.
-- [ ] Table IV — deployment cost. `table_deployment_cost.tex` exists but is the
-      512 px seed-42 version; the paper quotes the 224 px three-seed paired
-      numbers. Regenerate.
+110 authoritative runs, 110/110 COMPLETE, 134.3 h training. No further GPU
+work is planned or recommended.
 
-## Writing
+## Artifacts — COMPLETE
 
-- [ ] Related work section — currently absent. Needs DomainBed
-      (`gulrajani2021domainbed`), medical foundation models, and the
-      linear-probe-vs-fine-tune literature.
-- [ ] Author list, affiliations, funding, ethics statement.
-- [ ] IEEEtran `\num{}` requires `siunitx`; either add the package or spell the
-      counts out.
-- [ ] Decide whether calibration results (ECE, temperature scaling) get their
-      own subsection or fold into the deployment-cost paragraph.
+| item | status |
+|---|---|
+| authoritative master table | `outputs/tables/JBHI_MASTER_RESULTS.csv` / `.tex` |
+| primary interaction table | `outputs/tables/JBHI_PRIMARY_INTERACTION.csv` / `.tex` |
+| claim–evidence map | `docs/FINAL_CLAIM_EVIDENCE_MAP.md`, `outputs/tables/final_claim_evidence.csv` |
+| four main figures (PNG 300 dpi + PDF) | `outputs/figures/jbhi_final/` |
+| evidence freeze with hashes | `docs/JBHI_EVIDENCE_FREEZE.md` |
+| dataset / contamination table | `docs/JBHI_DATASET_PROVENANCE.md` |
+| novelty audit (corrected) | `docs/LITERATURE_NOVELTY_AUDIT.md` |
+| main-vs-supplement placement | `docs/JBHI_CONTENT_PLACEMENT.md` |
 
-## Discipline
+## Remaining — AUTHOR DECISIONS ONLY
 
-`paper/check_numbers.py` verifies every four-decimal value in `main.tex`
-against a generator table and exits non-zero on any that matches none. Run it
-before each commit. It currently passes.
+None of these can be resolved from the code or the data. Every one needs a
+human.
 
-Two values in the phase reports were previously typed from memory and were
-wrong; that is what this script exists to prevent.
+- [ ] **Author list and order**
+- [ ] **Affiliations** for each author
+- [ ] **Corresponding author** — name, email, postal address
+- [ ] **Funding statement** — grant numbers, or an explicit "no funding" line
+- [ ] **Institutional ethics determination** — the exact wording for a study
+      using only previously published, de-identified public datasets (DDR,
+      APTOS 2019, IDRiD, EyePACS). Typically an IRB-exemption or
+      not-human-subjects-research statement; the institution must supply the
+      form of words.
+- [ ] **Conflict-of-interest statement** for every author
+- [ ] **Code availability** — whether this repository is released, under what
+      licence, and at what URL/DOI (Zenodo archive recommended for a commit
+      pin)
+- [ ] **Data availability** — pointers to the four public datasets plus their
+      individual access conditions; confirm redistribution is not implied
+- [ ] **Author contributions** (CRediT taxonomy)
+- [ ] **Final JBHI formatting** — IEEE template version, page and figure
+      limits, reference style, whether the supplement is a separate PDF
+- [ ] **Preprint policy** — whether to post, and where
+
+## Not open items
+
+These are decided and recorded; do not reopen them during drafting:
+
+- statistical framework and its vocabulary → `JBHI_EVIDENCE_FREEZE.md` §7
+- which claims may be made and in what words → `FINAL_CLAIM_EVIDENCE_MAP.md`
+- the novelty positioning, and the retracted "first comparison" claim →
+  `LITERATURE_NOVELTY_AUDIT.md` §0
+- the study chronology and how the two-domain family must be described →
+  `JBHI_EVIDENCE_FREEZE.md` §10
+- what goes in the supplement → `JBHI_CONTENT_PLACEMENT.md`

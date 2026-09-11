@@ -74,17 +74,18 @@ def _verdict(frame) -> str:
         agreement = ("in the same direction on both"
                      if len(directions) == 1 else
                      "in opposite directions on the two domains")
-        return ("The interaction is established on both held-out domains, "
+        return ("The interaction is statistically supported on both held-out "
+                "domains under the study's inferential framework, "
                 + agreement + ".")
     if not established:
         return ("The interaction is not demonstrated on either held-out "
-                "domain after correction. At five seeds this bounds the effect "
+                "domain after adjustment. At five seeds this bounds the effect "
                 "only as tightly as the intervals above and is not evidence "
                 "that the two protocols agree.")
     kept = ", ".join(sorted(names))
     lost = ", ".join(sorted(r.domain for r in absent))
-    return ("The interaction is established on " + kept + " and not "
-            "demonstrated on " + lost + ". A non-significant result at five "
+    return ("The interaction is statistically supported on " + kept + " and "
+            "not demonstrated on " + lost + ". A non-significant result at five "
             "seeds bounds the effect only as tightly as the interval above; it "
             "does not establish that the protocols agree on " + lost + ".")
 
@@ -137,8 +138,8 @@ def main() -> None:
             "attainable two-sided value at five seeds is $0.0625$; it cannot "
             "reach conventional significance at this sample size for any "
             "effect size and is reported as sensitivity. A domain is treated "
-            "as established only when the corrected test and the interval "
-            "agree. No pooled two-domain $p$-value is reported: the two test "
+            "as statistically supported only when the adjusted test and the "
+            "interval agree. No pooled two-domain $p$-value is reported: the two test "
             "sets differ in size and in shift structure, so a pooled value "
             "would describe neither. " + _verdict(frame)
         )

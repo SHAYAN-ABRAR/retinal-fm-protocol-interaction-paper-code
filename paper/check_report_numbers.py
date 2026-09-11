@@ -57,6 +57,19 @@ REPORTS = [
             "full_finetune_primary.csv",
         ],
     },
+    {
+        # The claim-evidence map quotes the authoritative tables directly. If a
+        # number in it stops tracing, the manuscript would inherit the drift.
+        "report": ROOT / "docs" / "FINAL_CLAIM_EVIDENCE_MAP.md",
+        "sources": [
+            "JBHI_MASTER_RESULTS.csv",
+            "JBHI_PRIMARY_INTERACTION.csv",
+            "final_claim_evidence.csv",
+            "aptos_secondary_outcomes.csv",
+            "full_finetune_source_validation.csv",
+            "aptos_full_finetune_source_validation.csv",
+        ],
+    },
 ]
 
 # Values that are design facts or derived in one line, not measurements.

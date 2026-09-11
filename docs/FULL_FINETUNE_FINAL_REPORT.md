@@ -17,8 +17,9 @@ calibrated test. **Seed-level inference** — a one-sample *t*-test on the
 per-seed paired effects, with the exact sign-flip permutation as a sensitivity
 check — supplies the formal test.
 
-A claim is treated as established only when **both** agree: the seed-level test
-reaches significance *and* the crossed interval excludes zero. They answer
+A claim is treated as statistically supported under the study's inferential
+framework only when **both** agree: the seed-level test reaches significance
+*and* the crossed uncertainty interval excludes zero. They answer
 different questions (would another seed agree / would another sample of
 patients agree), and a generalisation claim needs both.
 
@@ -49,7 +50,8 @@ be read as evidence of absence.
 
 **No difference is demonstrated under full fine-tuning.** The crossed interval
 excludes zero but the seed-level test does not reach significance, and under
-the two-bar rule that is not established. The disagreement is informative: the
+the study's inferential framework that is not supported -- where the two
+disagree the formal test governs. The disagreement is informative: the
 effect is reasonably consistent across *patients* but not across *seeds*, and
 seed variance is the binding uncertainty here.
 
@@ -105,7 +107,7 @@ Holm-corrected within this two-member family. They do not replace §3.
 Neither survives correction. The pattern is monotone — the ImageNet-MAE
 advantage attenuates progressively as more of the network is unfrozen — but
 each individual step is underpowered at five seeds. Only the full span
-(frozen → full) is established.
+(frozen → full) is statistically supported.
 
 ## 5. SECONDARY outcomes, full fine-tuning
 

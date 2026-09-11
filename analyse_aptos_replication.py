@@ -24,8 +24,10 @@ got wrong once:
   attainable sign-flip p is 0.0625, so it cannot reach 0.05 however clean the
   data; it is reported as sensitivity, never as the test.
 
-A claim is **established** only when the seed-level test survives Holm *and* the
-crossed interval excludes zero.
+An effect is described as **statistically supported under the study's
+inferential framework** only when the multiplicity-adjusted seed-level test
+reaches significance *and* the crossed interval excludes zero. Where the two
+disagree, the formal test governs and the effect is not supported.
 
 What it produces:
 
@@ -338,7 +340,8 @@ def main() -> int:
               f"{entry['p_ttest']:>8.4f} {entry['p_holm']:>8.4f} "
               f"{entry['sign_agreement']:>4}/5")
     for entry in family:
-        verdict = ("established (Holm-adjusted test and interval agree)"
+        verdict = ("statistically supported under the study's inferential "
+                   "framework (Holm-adjusted test and interval agree)"
                    if entry["established"] else
                    "not demonstrated -- and not a demonstration of equivalence")
         print(f"    {entry['domain']:<6} -> {verdict}")

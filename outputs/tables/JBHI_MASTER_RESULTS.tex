@@ -1,0 +1,22 @@
+\begin{table*}[t]
+\centering
+\caption{Authoritative per-protocol results on the three held-out domains, quadratic weighted kappa. $\Delta$ is the paired ImageNet-MAE minus RETFound difference; intervals are crossed seed $\times$ case bootstrap uncertainty intervals and $p$ is an uncorrected paired seed-level $t$-test. The frozen linear probe was run at ten seeds and the two adaptation protocols at five, so each frozen row appears twice: once over all ten seeds as a descriptive estimate and once over the five seeds common to every protocol. Only the common-five rows may be differenced across protocols, since the interaction is a paired quantity. IDRiD has no full fine-tuning row: that experiment was not run, and no value is imputed for it. Formal multiplicity-adjusted inference in this study attaches to the protocol interaction in Table\~\ref{tab:jbhi-primary-interaction}, not to the per-protocol comparisons here.}
+\label{tab:jbhi-master-results}
+\begin{tabular}{lllrrrrrrr}
+\toprule
+Held-out & Protocol & Seed set & $n$ & ImageNet-MAE & RETFound & $\Delta$ & 95\% CI & $p$ & sign \\
+\midrule
+DDR & Frozen linear probe & all-10 & 10 & 0.5756 & 0.5130 & $+0.0626$ & $[+0.0440, +0.0824]$ & 0.0000 & 10/10 \\
+DDR & Frozen linear probe & common-5 & 5 & 0.5805 & 0.5103 & $+0.0702$ & $[+0.0468, +0.0978]$ & 0.0057 & 5/5 \\
+DDR & Partial FT (last 4/24) & common-5 & 5 & 0.7183 & 0.6966 & $+0.0217$ & $[-0.0004, +0.0438]$ & 0.1401 & 3/5 \\
+DDR & Full fine-tuning & common-5 & 5 & 0.6209 & 0.6648 & $-0.0439$ & $[-0.0861, -0.0103]$ & 0.1035 & 4/5 \\
+APTOS & Frozen linear probe & all-10 & 10 & 0.5963 & 0.4829 & $+0.1134$ & $[+0.0787, +0.1493]$ & 0.0001 & 10/10 \\
+APTOS & Frozen linear probe & common-5 & 5 & 0.5872 & 0.4796 & $+0.1075$ & $[+0.0623, +0.1536]$ & 0.0121 & 5/5 \\
+APTOS & Partial FT (last 4/24) & common-5 & 5 & 0.8334 & 0.8261 & $+0.0073$ & $[-0.0107, +0.0234]$ & 0.4007 & 4/5 \\
+APTOS & Full fine-tuning & common-5 & 5 & 0.8123 & 0.8040 & $+0.0083$ & $[-0.0095, +0.0258]$ & 0.3489 & 4/5 \\
+IDRiD & Frozen linear probe & all-10 & 10 & 0.6363 & 0.6792 & $-0.0429$ & $[-0.0888, +0.0037]$ & 0.0034 & 9/10 \\
+IDRiD & Frozen linear probe & common-5 & 5 & 0.6275 & 0.6701 & $-0.0426$ & $[-0.0959, +0.0131]$ & 0.0497 & 5/5 \\
+IDRiD & Partial FT (last 4/24) & common-5 & 5 & 0.7254 & 0.7676 & $-0.0421$ & $[-0.0879, +0.0044]$ & 0.0653 & 5/5 \\
+\bottomrule
+\end{tabular}
+\end{table*}

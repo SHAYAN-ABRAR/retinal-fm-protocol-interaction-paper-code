@@ -1,0 +1,17 @@
+key,value
+git_commit,15a50dce4d9aa3875fd9339871a2dc60ba73977b
+git_tree_clean,False
+python,3.14.3
+platform,Windows-11-10.0.26200-SP0
+torch_version,2.9.1+cu128
+timm_version,1.0.28
+numpy_version,2.5.2
+pandas_version,3.0.5
+scipy_version,1.18.0
+sklearn_version,1.9.0
+cuda_version,12.8
+gpu,NVIDIA GeForce RTX 5060 Laptop GPU
+retfound_checkpoint_file,RETFound_mae_natureCFP.pth
+retfound_checkpoint_bytes,3952489221
+retfound_checkpoint_sha256,e1e4f66a1b792eeb6e2efaf158f33be35c8255f36b3d17ed67cd5129da246485
+imagenet_mae_checkpoint,timm vit_large_patch16_224.mae

@@ -30,8 +30,9 @@ Holm-corrected across exactly these two members. Source:
 | DDR | 12,424 | −0.1141 | [−0.1548, −0.0728] | 5/5 | 0.0066 | 0.0132 | 0.0625 |
 | APTOS | 3,504 | −0.0992 | [−0.1595, −0.0397] | 5/5 | 0.0370 | 0.0370 | 0.0625 |
 
-**Both established** under the two-bar rule: the seed-level test survives Holm
-*and* the crossed interval excludes zero, on each domain separately.
+**Both are statistically supported under the study's inferential framework**:
+on each domain separately the Holm-adjusted seed-level test reaches
+significance *and* the crossed uncertainty interval excludes zero.
 
 Per-seed interactions, all ten negative:
 
@@ -99,13 +100,19 @@ Uncorrected. Source: `aptos_adaptation_depth.csv`.
 | full fine-tuning | 0.8123 | 0.8040 | +0.0083 | [−0.0095, +0.0258] | 4/5 | 0.3489 |
 
 This is the interaction in plain view. Under a frozen encoder ImageNet-MAE leads
-by **+0.1075** QWK; once the backbone can adapt — partially or fully — the gap
-collapses to **+0.0073** and **+0.0083**, neither distinguishable from zero. The
-ranking a linear probe produces does not survive adaptation.
+by **+0.1075** QWK; once the backbone can adapt — partially or fully — the
+apparent advantage is strongly attenuated, to **+0.0073** and **+0.0083**,
+neither distinguishable from zero.
+
+**The mean ordering ImageNet-MAE > RETFound technically remains on APTOS at
+every depth.** What changes is the magnitude, not the sign, so this must be
+described as attenuation and not as a reversal or as a ranking that "does not
+survive". On DDR the mean does cross zero under full fine-tuning; that is a
+descriptive observation about DDR and is not generalised to APTOS.
 
 Note also that both initialisations gain enormously from adaptation on APTOS
 (RETFound 0.4796 → 0.8040), so this is not a ceiling effect masking a
-difference: the protocols differ in what they rank, not merely in headroom.
+difference.
 
 ## Secondary outcomes under full fine-tuning
 

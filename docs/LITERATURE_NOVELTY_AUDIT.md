@@ -1,120 +1,132 @@
-# Literature and novelty audit
+# Literature and novelty audit — final
 
-**Date:** 2026-08-30 · **Status:** first pass, sources verified where accessible
-**Purpose:** establish what may and may not be claimed before any novelty wording
-enters the manuscript.
+**Revised 2026-09-11, after the evidence freeze, incorporating a correction
+that narrows the contribution.**
 
-**Verification status.** The February 2026 Nature Communications paper has now
-been checked against the full article; the fields previously marked *unverified*
-are confirmed below and the marker removed. RETFound-Green has been read for its
-adaptation-protocol comparison. Remaining gaps are listed in §4.
+## 0. The correction, stated first
 
----
+An earlier version of this audit framed the contribution as the **first
+comparison of RETFound against the ImageNet-MAE checkpoint from which it
+originated**.
 
-## 1. The paper that constrains us most
+**That claim is wrong and must not appear anywhere in the manuscript.**
 
-**Understanding pre-training data effects in retinal foundation models using two
-large fundus cohorts** — *Nature Communications*, February 2026.
-<https://www.nature.com/articles/s41467-026-70077-z>
+The RETFound paper (Zhou et al., *Nature* 2023) already compares RETFound
+against an **SSL-ImageNet** baseline. That paper states that RETFound *uses the
+weights of SSL-ImageNet as a baseline before extending to retinal images* —
+i.e. the lineage relationship is explicit in the original work. Its comparison
+models share the architecture, its downstream models use matched fine-tuning,
+and it includes cross-dataset DR evaluation in which RETFound is reported as
+significantly better than SSL-ImageNet on external sets.
 
-| aspect | what it does | verified? |
+So the pairing itself is not new. Neither is comparing the two arms under
+fine-tuning, nor evaluating them across DR datasets.
+
+### What we may claim
+
+> A **within-lineage evaluation of how downstream adaptation protocol changes
+> the estimated value of RETFound's additional retinal-domain MAE continuation
+> pretraining relative to its SSL-ImageNet starting point**, with a **direct
+> protocol-by-initialisation interaction test** replicated across independent
+> held-out DR domains.
+
+The novel object is the **interaction**, estimated directly and with an explicit
+inferential framework, not the pair and not either protocol alone.
+
+### What we must not claim
+
+- "First comparison of RETFound against its own ImageNet-MAE initialisation."
+- "First lineage-matched evaluation of RETFound."
+- "First to show ImageNet-MAE can match or beat RETFound."
+- Any uniqueness claim not supported by §2 and the search in §3.
+
+## 1. Search performed
+
+Executed 2026-09-11 against the live literature for the conjunction:
+
+> RETFound versus its SSL-ImageNet/MAE starting checkpoint × frozen linear probe
+> versus full fine-tuning × external DR grading × direct interaction analysis.
+
+**No publication performing that specific conjunction was found.** Adjacent work
+is enumerated in §2, and every element of the conjunction individually has prior
+art. The manuscript should therefore claim the *interaction analysis* as the
+contribution and cite §2 generously, rather than claim priority over any
+component.
+
+This is a negative search result, not proof of absence. The manuscript wording
+should be "to our knowledge" rather than "first".
+
+## 2. The comparison matrix
+
+| | pairing | protocols compared | external DR? | interaction estimated? | relation to us |
+|---|---|---|---|---|---|
+| **A. RETFound** — Zhou et al., *Nature* 2023, `10.1038/s41586-023-06555-x` | RETFound vs **SSL-ImageNet** (its own starting point), SL-ImageNet; same ViT-L architecture | fine-tuning only, matched across arms | yes — cross-dataset DR incl. APTOS-2019, IDRiD, MESSIDOR-2 | **no** | **Closest prior art.** Establishes the lineage pair and matched fine-tuning. Does **not** contrast frozen probing against matched full fine-tuning for that pair, and estimates no protocol interaction. |
+| **B. RETFound-Green** — *Nat. Commun.* 2025, `10.1038/s41467-025-62123-z` ("half the data, 400× less compute") | new efficient retinal FM vs RETFound and others | linear probing and full fine-tuning both appear | yes | no | Model identity and adaptation protocol **vary together**; it is not one checkpoint pair evaluated under both protocols. |
+| **C. Pre-training data effects** — *Nat. Commun.* 17:3309 (2026), `10.1038/s41467-026-70077-z`, PMID 41764179 | parallel retinal FMs pretrained on two different 904,170-image cohorts (Moorfields; Shanghai) | linear probing and full encoder fine-tuning, five seeds, multiple external sets | yes | no | Compares FMs built from **different pretraining cohorts**, not the before/after of a continuation step on one lineage. Methodologically the nearest neighbour on protocol and seed design. |
+| **D. Frozen-transfer calibration benchmark** — *Front. Med.* 2026, `10.3389/fmed.2026.1815982`, PMID 42078464 | MedSigLIP vs RETFound vs EfficientNet-B0 (ImageNet-supervised) | **frozen only** for the principal benchmark | yes — APTOS internal, MESSIDOR-2 external | no | **Reports RETFound below an ImageNet-supervised baseline under frozen external transfer** (external AUC 0.697 vs 0.745) and already argues MAE-derived frozen representations may need nonlinear adaptation. Different architectures and pretraining families; no within-lineage frozen-vs-full interaction. |
+| **E. Label efficiency** — *Lancet Digit. Health* 2026, PMID 42665469, online 28 Aug 2026 (preprint arXiv:2501.12016) | RETFound vs ResNet50, ViT-Base, SwinV2 (ImageNet-pretrained) | full fine-tuning at varying label fractions | yes, ocular + systemic | no | **For ocular disease with larger labelled sets, ImageNet-pretrained models perform comparably to RETFound after full fine-tuning**; RETFound's advantage concentrates in systemic tasks at small label counts. Directly relevant context for our full-FT null. Different architectures; not the lineage pair; no interaction test. |
+
+**D is the paper closest to our frozen-arm result** and **E is the paper closest
+to our full-FT result**. Both must appear in Related Work, and the manuscript
+should present our contribution as *connecting* the two observations via a
+direct interaction on a single lineage pair, rather than as discovering either.
+
+## 3. Where each element already has prior art
+
+| element | prior art | so we cannot claim |
 |---|---|---|
-| Models | FM-MEH and FM-SDPP — two foundation models pretrained with identical pipelines on two retinal cohorts (Moorfields, 904,170 images; Shanghai DPP, 904,170) | yes |
-| Adaptation | **Both** full encoder fine-tuning (all model parameters tuned) **and** linear probing (all parameters frozen, one linear classifier trained) | yes |
-| Tasks | DR detection, diabetic macular oedema, ischaemic stroke | yes |
-| Metrics | AUROC, AUPRC | yes |
-| Evaluation | held-out MEH and SDPP data plus public datasets | yes |
-| Seeds | **five random seeds**, mean and SD reported across them | yes |
-| Statistics | **two-sided Welch $t$-test with Holm–Bonferroni correction** | yes |
-| Downstream public datasets | include **APTOS2019 and IDRiD** — the same cohorts we hold out | yes |
-| Lineage-matched control | **No** — compares two *retinal* models to each other | yes |
-| Contribution | pre-training data demographics shape generalisability and fairness (age gaps; sex and ethnicity minimal) | yes |
+| RETFound vs its SSL-ImageNet start | A | novelty of the pairing |
+| linear probing vs full fine-tuning of retinal FMs | B, C | novelty of the protocol contrast |
+| external/LODO DR grading | A, C, D, E | novelty of the evaluation setting |
+| RETFound underperforming an ImageNet baseline | D (frozen), E (full FT, ocular) | novelty of the direction of the finding |
+| "frozen probes mislead about fine-tuned transfer" as a general idea | broad transfer-learning literature, incl. medical-imaging benchmarks reporting linear probing beating fine-tuning on external data | novelty of the hypothesis |
+| **direct protocol × initialisation interaction, estimated with CI and multiplicity-adjusted test, replicated on a second held-out domain** | **none found** | — this is the contribution |
 
-### What this forbids
+## 4. Honest framing for the manuscript
 
-The following claims are **not available** and must not appear:
+Recommended positioning, in order:
 
-- "first to compare linear probing and fine-tuning" — they do both, explicitly,
-  with five seeds, Welch $t$-tests and Holm correction
-- "first to show adaptation strategy changes conclusions" — their linear-probe
-  results already differ from their fine-tuned results by subgroup
-- "first to evaluate on APTOS or IDRiD under domain shift" — both are among
-  their downstream public datasets
-- any unqualified "first", "novel", "unprecedented", or "no prior work" about
-  protocol-dependent evaluation of retinal foundation models
+1. **Motivation.** Frozen linear probing is widely used to rank foundation-model
+   representations cheaply (B, C, D). Whether that ranking predicts what happens
+   after full adaptation is an assumption, rarely tested directly.
+2. **Gap.** Prior work either varies model identity and protocol together (B, C),
+   evaluates frozen representations only (D), or fine-tunes only (A, E). The
+   protocol effect is therefore confounded with model identity, or not estimated.
+3. **Approach.** Hold model identity to a single lineage step — RETFound versus
+   the exact SSL-ImageNet MAE checkpoint it continued from — and vary only the
+   adaptation protocol, estimating the interaction directly.
+4. **Result.** The interaction is statistically supported on two independent
+   held-out DR domains, in the same direction, with all ten seed-level
+   interactions negative.
+5. **Consequence.** A frozen-probe comparison of these two checkpoints does not
+   transfer to their matched fine-tuned comparison. Reported representation
+   rankings that rest on frozen probes should be read with that in mind.
 
-**RETFound-Green also compares protocols**, setting a linear probe of
-RETFound-Green against a fully fine-tuned RETFound-MEH and reporting broadly
-comparable performance. That is a protocol comparison, so it further forecloses
-any general novelty claim about comparing probing with fine-tuning. It differs
-from our design in the same way the 2026 paper does: it varies the *model* and
-the *protocol* together, so it cannot isolate what either contributes. Ours
-holds the model pair fixed by construction — the same weights before and after
-one pretraining stage — and varies only the protocol.
+## 5. Required citations
 
-### What it leaves open
+At minimum A–E above, plus the checkpoint sources:
 
-They compare **retinal cohort A against retinal cohort B**. Neither model is
-compared against the general-purpose checkpoint it was built from, so their
-design cannot answer *what the retinal pretraining added relative to its own
-starting point*. That is the gap our experiment occupies.
+- Zhou et al., *Nature* 2023 — RETFound (A)
+- RETFound-Green, *Nat. Commun.* 2025 (B)
+- Pre-training data effects, *Nat. Commun.* 2026 (C)
+- Frozen-transfer calibration benchmark, *Front. Med.* 2026 (D)
+- Label efficiency, *Lancet Digit. Health* 2026 (E)
+- He et al., MAE (the `vit_large_patch16_224.mae` lineage)
+- Dataset sources: DDR, APTOS 2019, IDRiD, EyePACS
 
----
+**BibTeX status:** entries for A–E must be added to `paper/refs.bib` by whoever
+drafts the manuscript, from the DOIs/PMIDs recorded above. They are recorded
+here rather than fabricated into `refs.bib` with invented page numbers, volume
+numbers or author lists. **Verify every field against the publisher record
+before submission.**
 
-## 2. Comparison matrix
+## 6. Reviewer objections to pre-empt
 
-| Paper | Datasets | Backbone / FMs | Pretraining comparison | Adaptation protocols | External evaluation | Seeds | Statistics | Domain-shift design | Main contribution | Overlap with us | What remains ours |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| **RETFound** (Nature 2023) | MEH-MIDAS + EyePACS pretrain; multiple downstream | ViT-L/16 MAE | vs ImageNet-supervised and SSL baselines | fine-tuning (primary) | yes | not seed-focused | AUROC CIs | internal/external splits | a retinal FM improves downstream ocular and systemic prediction | our reference model | it does not compare against its own MAE init |
-| **Pre-training data effects** (Nat Commun 2026) | MEH, SDPP, public | two parallel retinal FMs | retinal cohort A vs B | **full FT + linear probe** | yes | 5 | Welch $t$-test + Holm | demographic subgroups | pretraining demographics drive fairness | **protocol comparison — closest work** | lineage-matched control; ordinal DR grading; LODO shift |
-| **RETFound-Green** (Nat Commun 2025) | retinal | efficient retinal FM (half data, ~400× less compute) | vs RETFound-MEH | **linear probe (Green) vs full fine-tuning (RETFound-MEH)** | yes | — | — | — | a cheaper FM reaches broadly comparable performance | **compares protocols across models** | it varies model *and* protocol together; ours holds both fixed around one pretraining stage |
-| **CauDR** (Comput Biol Med 2024) | 4 public DR sets | CNN | — | supervised | yes | — | — | causal DG benchmark | causal DG for DR | DR + multi-dataset DG | no FM; no protocol comparison |
-| **Phase-augmentation DG for DR** (2026) | public DR sets | CNN | — | supervised | yes | — | — | augmentation-based DG | DG method for DR grading | DR + DG | no FM; no protocol comparison |
-| **DomainBed** (Gulrajani & Lopez-Paz 2021) | DG benchmarks | ResNet | — | supervised | yes | multiple | careful model selection | canonical DG | DG methods do not beat ERM | our DG null replicates it | medical modality; FM protocol question |
-| **This work** | DDR, APTOS, IDRiD, EyePACS | RETFound vs **its own ImageNet-MAE init**; DenseNet121; ConvNeXt | **lineage-matched** | linear probe + partial FT (+ full FT pending) | leave-one-dataset-out | **10 frozen / 5 partial FT** | crossed seed×case bootstrap (intervals) + paired $t$-test with Holm (inference) | 4 datasets as domains, LODO | protocol can change the ranking of a lineage-matched pair | — | see §3 |
-
----
-
-## 3. The narrow claim we can defend
-
-> An exact lineage-matched comparison of a retinal foundation model against the
-> precise general-purpose checkpoint from which it was constructed, under
-> identical downstream protocols, on unseen-domain ordinal DR grading — showing
-> whether the ranking of that pair depends on the adaptation protocol.
-
-Four components, each of which we have checked is not jointly present above:
-
-1. **Lineage-matched.** RETFound's own checkpoint records
-   `resume='./mae_pretrain_vit_large_full.pth'`, and that exact checkpoint is
-   public as `vit_large_patch16_224.mae`. Architecture, parameter count,
-   objective and initialisation are therefore identical by construction, and
-   the intervention is the additional retinal-domain MAE pretraining stage
-   itself. No paper in §2 does this.
-2. **Cross-dataset ordinal grading**, 5-class ICDR with QWK and severe-error
-   rate, rather than binary detection with AUROC.
-3. **Leave-one-dataset-out** shift across four public cohorts, with the
-   pretraining-contaminated dataset excluded as a target by construction.
-4. **Seed-aware inference**: ten seeds frozen, five partial FT, crossed
-   seed × case bootstrap with Holm correction.
-
-**Wording that is permitted:** "to our knowledge, no prior work compares a
-retinal foundation model against the exact general-purpose checkpoint from
-which it was initialised". This is a *narrow* to-our-knowledge claim about a
-specific experimental design, not a claim about protocol comparison in general.
-
-**Wording that is forbidden:** anything implying we are first to compare
-probing with fine-tuning, or first to observe protocol-dependent conclusions.
-
----
-
-## 4. Outstanding before submission
-
-- [ ] Obtain the Nat Commun 2026 full text; confirm seed count, multiplicity
-      method, and whether any lineage-matched control appears in supplementary
-- [ ] Read RETFound-Green in full — it compares against RETFound and may
-      contain an initialisation ablation
-- [ ] Search for PEFT/LoRA-vs-probing comparisons in retinal imaging published
-      after 2026-01
-- [ ] Confirm CauDR and the phase-augmentation paper do not include an FM arm
-- [ ] Re-run this audit immediately before submission; the field is moving fast
-      enough that a three-month-old audit is not evidence
+| objection | response available from our evidence |
+|---|---|
+| "RETFound already compared against SSL-ImageNet." | Correct, and cited as the closest prior art. Our object is the protocol interaction, which that paper does not estimate. |
+| "Your fine-tuning isn't fine-tuning." | Full fine-tuning of all 303,306,757 encoder parameters, asserted at runtime, in addition to a partial-FT arm. |
+| "Five seeds is too few." | Acknowledged and quantified: the sign-flip floor at five seeds is 0.0625 and is reported. The formal test is the paired seed-level *t*-test; ten of ten seed-level interactions are negative. |
+| "You tuned on the target." | Selection, early stopping and temperature are all on source validation. Target blindness during APTOS is auditable in the git history. |
+| "EyePACS was in RETFound's pretraining." | Disclosed. EyePACS is a *source* domain, never a held-out target; it applies identically to frozen and full arms and so cannot generate the interaction. |
+| "One architecture, one budget." | Stated as a scope limit, not defended. |
