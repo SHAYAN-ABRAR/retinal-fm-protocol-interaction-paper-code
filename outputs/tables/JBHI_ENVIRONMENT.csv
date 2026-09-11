@@ -1,6 +1,6 @@
 key,value
-git_commit,15a50dce4d9aa3875fd9339871a2dc60ba73977b
-git_tree_clean,False
+git_commit,4e220b2411ad31958c5ef6f6b81d746bac1e0536
+git_tree_clean,True
 python,3.14.3
 platform,Windows-11-10.0.26200-SP0
 torch_version,2.9.1+cu128

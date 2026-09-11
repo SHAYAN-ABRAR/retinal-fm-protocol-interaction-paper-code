@@ -58,6 +58,17 @@ REPORTS = [
         ],
     },
     {
+        # The handoff report reproduces the master and interaction tables for
+        # the drafter, so it must trace like any other results document.
+        "report": ROOT / "docs" / "JBHI_MANUSCRIPT_HANDOFF.md",
+        "sources": [
+            "JBHI_MASTER_RESULTS.csv",
+            "JBHI_PRIMARY_INTERACTION.csv",
+            "aptos_adaptation_depth.csv",
+            "final_claim_evidence.csv",
+        ],
+    },
+    {
         # The claim-evidence map quotes the authoritative tables directly. If a
         # number in it stops tracing, the manuscript would inherit the drift.
         "report": ROOT / "docs" / "FINAL_CLAIM_EVIDENCE_MAP.md",
