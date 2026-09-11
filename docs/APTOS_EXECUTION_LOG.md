@@ -69,15 +69,17 @@ is retained under a name recording its fate.
 | `ft_aptos_imagenet_s2_stopped_at_pause.log` | 7 | 2026-09-08 09:02 | stopped at an operator pause |
 | `ft_aptos_retfound_s2_stopped_at_pause.log` | 15 | 2026-09-09 08:34 | stopped at an operator pause |
 | `ft_aptos_imagenet_s4_stopped_at_pause.log` | 0 | 2026-09-10 09:36 | stopped at an operator pause |
+| `ft_aptos_imagenet_s4_hung_standby_2244.log` | 13 | 2026-09-10 22:44 | machine put to sleep overnight |
 
 **No execution was ever abandoned because of what it showed.** Five were
-operator pauses and two were the same platform fault. The protocol's rule
+operator pauses and three were the machine sleeping mid-run. The protocol's rule
 stands: a run is re-run only for a demonstrated implementation fault or an
 interruption, never because a result is inconvenient.
 
 ## The Modern Standby deadlock
 
-Twice the machine entered Modern Standby mid-epoch and the run did not resume.
+Three times the machine entered Modern Standby mid-epoch and the run did not
+resume.
 It **deadlocks** rather than failing: the main process spins on exactly one
 core, the dataloader workers stop accumulating CPU entirely, VRAM stays
 allocated and the GPU reports 0% utilisation. Nothing exits, nothing raises,
@@ -94,19 +96,41 @@ That occurrence cost 4 h 45 min of wall clock — the log's last line is at
 20:42:02 and the replacement run started at 01:26:36 — on top of the four
 epochs that had to be thrown away.
 
-### Mitigation
+### Mitigation, and its limit
 
 `keep_awake.py` holds `ES_SYSTEM_REQUIRED` (with away mode where the power
 configuration grants it) for the lifetime of a nominated process, and is
-started alongside each training run. It deliberately changes **no** system
-setting: the request lives in that process and disappears when it exits, so
-nothing has to be undone afterwards and the machine's power policy is not
-quietly altered beyond the experiment. The display is still allowed to sleep.
+started alongside each training run. It changes **no** system setting: the
+request lives in that process and disappears when it exits, so nothing has to be
+undone afterwards and the machine's power policy is not quietly altered beyond
+the experiment.
 
-Detection is independent of prevention: a monitor watches for a log frozen more
-than 1800 s while more than 1000 MiB of VRAM is held and the GPU is under 20%,
-which is the conjunction that distinguishes this deadlock from a long epoch.
-It is what caught the seed-1 occurrence.
+**It does not prevent this failure, and the third occurrence proved it.** The
+ImageNet-MAE seed-4 run was lost with the guard running and still holding its
+request. The Windows event log records the machine entering Modern Standby at
+22:51:53 and `Power-Troubleshooter` records a sleep from 23:13 to 10:12 the next
+morning — eleven hours. This is an S0 Low Power Idle system (`powercfg /a`),
+and both the sleep and display timeouts on AC were already `0` (never), with the
+machine on AC at 100% charge. So no idle timer caused it: the sleep was
+initiated, by a lid close or an explicit sleep. **No user-mode execution-state
+request can veto a deliberate sleep**, which means the guard never could have
+stopped this, and the one overnight run that survived earlier simply happened on
+a night the machine was left awake.
+
+The claim previously made here — that the guard stops the deadlock recurring —
+was wrong, and is corrected rather than deleted so the record shows what was
+believed and on what evidence.
+
+What actually prevents it is leaving the machine awake for the duration of a
+run: not closing the lid, not selecting Sleep. A run is 4–6 h. Setting the
+lid-close action to "do nothing" on AC would enforce it, but that is a change to
+the machine's behaviour outside this experiment and is the operator's call, not
+something to apply silently.
+
+Detection is independent of prevention and does work: a monitor watches for a
+log frozen more than 1800 s while more than 1000 MiB of VRAM is held and the GPU
+is under 20%, the conjunction that distinguishes this deadlock from a long
+epoch. It caught both the seed-1 and seed-4 occurrences.
 
 ## A restarted run is not bit-identical to the run it replaces
 
