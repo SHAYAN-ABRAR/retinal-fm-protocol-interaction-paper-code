@@ -42,19 +42,71 @@ inferential framework, not the pair and not either protocol alone.
 
 ## 1. Search performed
 
-Executed 2026-09-11 against the live literature for the conjunction:
+The target conjunction, all six elements together:
 
-> RETFound versus its SSL-ImageNet/MAE starting checkpoint × frozen linear probe
-> versus full fine-tuning × external DR grading × direct interaction analysis.
+> RETFound **or its exact SSL-ImageNet/MAE predecessor** × same-lineage
+> comparison × frozen linear probing × full fine-tuning × external
+> DR/domain-shift evaluation × **direct protocol-by-initialisation interaction
+> analysis**.
 
-**No publication performing that specific conjunction was found.** Adjacent work
-is enumerated in §2, and every element of the conjunction individually has prior
-art. The manuscript should therefore claim the *interaction analysis* as the
-contribution and cite §2 generously, rather than claim priority over any
-component.
+**No publication performing that conjunction was found.**
 
-This is a negative search result, not proof of absence. The manuscript wording
-should be "to our knowledge" rather than "first".
+### Search record
+
+| | |
+|---|---|
+| dates | 2026-09-11 and **2026-09-12** (final search) |
+| sources | live web search; Crossref (`api.crossref.org`); NCBI PubMed E-utilities; publisher pages (Nature, Nature Communications, Frontiers, The Lancet Digital Health); arXiv listings surfaced through the above |
+
+Queries run on 2026-09-12:
+
+1. `within-lineage comparison retinal foundation model versus its own
+   pretraining initialization frozen linear probe full fine-tuning interaction
+   external diabetic retinopathy 2026`
+2. `"difference-in-differences" OR "interaction" adaptation protocol foundation
+   model evaluation linear probing misleads fine-tuning ranking medical imaging
+   2026 arxiv`
+
+Queries run on 2026-09-11:
+
+3. `RETFound foundation model linear probing versus full fine-tuning ImageNet
+   baseline diabetic retinopathy external validation 2026`
+4. `RETFound compared to its ImageNet MAE initialization checkpoint same weights
+   before after retinal pretraining continuation frozen versus fine-tuning
+   interaction`
+5. `protocol by initialization interaction linear probe full fine-tuning
+   foundation model does linear probing predict fine-tuned transfer medical
+   imaging`
+6. `RETFound SSL-ImageNet baseline comparison Nature 2023 same architecture
+   ViT-large fine-tuning adaptation protocol diabetic retinopathy
+   leave-one-dataset-out interaction`
+
+### Candidates examined and why each falls short
+
+| candidate | has | lacks |
+|---|---|---|
+| RETFound (Nature 2023) | the lineage pair; matched fine-tuning; external DR | frozen-vs-full contrast; **no interaction estimated** |
+| RETFound-Green (2025) | both protocols appear | model identity varies **with** protocol; not one checkpoint pair |
+| Pre-training data effects (2026) | both protocols; five seeds; external sets | compares **different pretraining cohorts**, not a before/after lineage step |
+| Frozen-transfer calibration benchmark (2026) | frozen arm; external DR; RETFound below an ImageNet baseline | **frozen only**; different architectures; no interaction |
+| Label efficiency (2026) | full FT; external; ImageNet-pretrained comparators | different architectures; not the lineage pair; no interaction |
+| Prognosis/PEFT and few-shot medical benchmarks | probe-vs-fine-tune contrasts, sometimes with reversals | not retinal-lineage; model identity confounded; no interaction estimate |
+| Multimodal DR comparisons (MedSigLIP, EyeCLIP, RET-CLIP) | probe-vs-fine-tune observations | different model families; no lineage control; no interaction |
+
+The 2026 literature does contain the adjacent observation that *"the choice
+between frozen linear probing and full fine-tuning can produce different
+relative rankings depending on the model"*. That strengthens the motivation and
+**weakens any priority claim over the phenomenon** — what remains unclaimed is
+estimating it directly, within one lineage, with an interaction test and
+multiplicity control, replicated on a second held-out domain.
+
+### Conclusion
+
+This is a negative search result, not proof of absence. Therefore:
+
+- use **"to our knowledge"**; do **not** use "first";
+- the claimed novelty is the **direct within-lineage protocol-interaction
+  evaluation**, not comparing RETFound with SSL-ImageNet, which is prior art.
 
 ## 2. The comparison matrix
 

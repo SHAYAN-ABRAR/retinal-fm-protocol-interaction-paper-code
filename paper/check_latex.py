@@ -61,6 +61,11 @@ KNOWN_COMMANDS = {
     "left", "right", "frac", "sqrt", "mu", "phantom", "footnotemark",
     "footnotetext", "IEEEauthorblockN", "IEEEauthorblockA", "clearpage",
     "newpage", "raggedright", "arraybackslash", "scriptsize", "bfseries",
+    # Used by the JBHI manuscript scaffold. `graphicspath` is a real graphicx
+    # command; the gate flagged it only because the allowlist is deliberately
+    # closed, which is the gate working as intended rather than a defect in
+    # the scaffold.
+    "graphicspath",
 }
 
 # Commands that are errors outside math mode. \to in a text-mode tabular cell

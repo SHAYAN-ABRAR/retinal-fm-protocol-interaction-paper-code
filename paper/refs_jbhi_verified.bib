@@ -1,0 +1,362 @@
+% =====================================================================
+% Verified bibliography for the JBHI manuscript.
+%
+% Every field below was checked on 2026-09-12 against a primary or
+% authoritative record: Crossref (api.crossref.org/works/<doi>), NCBI
+% E-utilities (PubMed esummary), or the publisher page.
+%
+% Nothing is invented. Where a venue does not issue DOIs, page numbers or
+% volumes -- PMLR, NeurIPS and ICLR proceedings -- the entry carries only
+% the fields that exist, rather than plausible-looking ones.
+%
+% Verification status per entry, and the items that remain uncertain, are
+% recorded in docs/DATASET_CITATION_NOTES.md. Read that file before
+% submission.
+% =====================================================================
+
+
+% --------------------------------------------------------------- core
+% Retinal foundation models and the pretraining lineage.
+
+@article{zhou2023retfound,
+  title    = {A foundation model for generalizable disease detection from
+              retinal images},
+  % Crossref lists 95 authors, including a consortium entry. The first
+  % eleven are reproduced verbatim and the rest deferred to "others", which
+  % BibTeX renders as et al. Listing a subset without "others" would
+  % misrepresent the authorship.
+  author   = {Zhou, Yukun and Chia, Mark A. and Wagner, Siegfried K. and
+              Ayhan, Murat S. and Williamson, Dominic J. and
+              Struyven, Robbert R. and Liu, Timing and Xu, Moucheng and
+              Lozano, Mateo G. and Woodward-Court, Peter and Kihara, Yuka and
+              others},
+  journal  = {Nature},
+  volume   = {622},
+  number   = {7981},
+  pages    = {156--163},
+  year     = {2023},
+  doi      = {10.1038/s41586-023-06555-x},
+}
+
+@article{engelmann2025retfoundgreen,
+  title    = {Training a high-performance retinal foundation model with
+              half-the-data and 400 times less compute},
+  author   = {Engelmann, Justin and Bernabeu, Miguel O.},
+  journal  = {Nature Communications},
+  volume   = {16},
+  number   = {1},
+  pages    = {6862},
+  year     = {2025},
+  doi      = {10.1038/s41467-025-62123-z},
+}
+
+@article{zhou2026pretrainingdata,
+  title    = {Understanding pre-training data effects in retinal foundation
+              models using two large fundus cohorts},
+  author   = {Zhou, Yukun and Wang, Zheyuan and Wu, Yilan and Ong, Ariel Yuhan
+              and Wagner, Siegfried K. and Ruffell, Eden and Chia, Mark A. and
+              Guan, Zhouyu and Ju, Lie and Engelmann, Justin and
+              Merle, David A. and Li, Tingyao and Shu, Jia and Nderitu, Paul
+              and Zou, Ke and Goh, Jocelyn Hui Lin and Hou, Qingshan and
+              Liu, Xiaoxuan and Wang, Yaxing and Tham, Yih Chung and
+              Altmann, Andre and Cheung, Carol Y. and Alexander, Daniel C. and
+              Topol, Eric J. and Denniston, Alastair K. and Wong, Tien Yin and
+              Sheng, Bin and Keane, Pearse A.},
+  journal  = {Nature Communications},
+  volume   = {17},
+  number   = {1},
+  pages    = {3309},
+  year     = {2026},
+  doi      = {10.1038/s41467-026-70077-z},
+}
+
+@article{poyrazer2026frozen,
+  title    = {How well do frozen foundation models transfer? A
+              calibration-focused benchmark for diabetic retinopathy grading},
+  author   = {Poyrazer, Mehmet and Ya{\u{g}}c{\i}, H{\"u}seyin and
+              Erten, R{\i}dvan},
+  journal  = {Frontiers in Medicine},
+  volume   = {13},
+  pages    = {1815982},
+  year     = {2026},
+  doi      = {10.3389/fmed.2026.1815982},
+}
+
+@article{yew2026labelefficiency,
+  title    = {Performance and label efficiency of traditional deep-learning
+              models and a retina-specific foundation model for ocular and
+              systemic disease detection: a retrospective comparative study},
+  author   = {Yew, Samantha Min Er and Lei, Xiaofeng and
+              Goh, Jocelyn Hui Lin and Zou, Ke and Chen, Yibing and
+              Srinivasan, Sahana and Chee, Miao-li and Pushpanathan, Krithi
+              and Hou, Qingshan and Soh, Zhi Da and Xue, Can Can and
+              Yu, Marco Chak Yan and Sabanayagam, Charumathi and
+              Tai, E Shyong and Sim, Xueling and Wang, Ya Xing and
+              Jonas, Jost B and Nangia, Vinay and Yang, Gabriel Dawei and
+              Ran, An Ran and Cheung, Carol Y and Feng, Yangqin and
+              Zhou, Jun and Goh, Rick Siow Mong and Zhou, Yukun and
+              Keane, Pearse A and Liu, Yong and Cheng, Ching-Yu and
+              Tham, Yih Chung},
+  journal  = {The Lancet Digital Health},
+  pages    = {101031},
+  year     = {2026},
+  doi      = {10.1016/j.landig.2026.101031},
+  note     = {PMID 42665469; published online 28 August 2026},
+}
+
+
+% ----------------------------------------------- architecture and lineage
+
+@inproceedings{he2022mae,
+  title     = {Masked Autoencoders Are Scalable Vision Learners},
+  author    = {He, Kaiming and Chen, Xinlei and Xie, Saining and Li, Yanghao
+               and Doll{\'a}r, Piotr and Girshick, Ross},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and
+               Pattern Recognition (CVPR)},
+  year      = {2022},
+}
+
+@inproceedings{dosovitskiy2021vit,
+  title     = {An Image is Worth 16x16 Words: Transformers for Image
+               Recognition at Scale},
+  author    = {Dosovitskiy, Alexey and Beyer, Lucas and Kolesnikov, Alexander
+               and Weissenborn, Dirk and Zhai, Xiaohua and Unterthiner, Thomas
+               and Dehghani, Mostafa and Minderer, Matthias and Heigold, Georg
+               and Gelly, Sylvain and Uszkoreit, Jakob and Houlsby, Neil},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+}
+
+@inproceedings{deng2009imagenet,
+  title     = {{ImageNet}: A large-scale hierarchical image database},
+  author    = {Deng, Jia and Dong, Wei and Socher, Richard and Li, Li-Jia and
+               Li, Kai and Fei-Fei, Li},
+  booktitle = {2009 IEEE Conference on Computer Vision and Pattern Recognition
+               (CVPR)},
+  year      = {2009},
+  doi       = {10.1109/CVPR.2009.5206848},
+}
+
+
+% ------------------------------------------- domain generalisation methods
+
+@inproceedings{sun2016deepcoral,
+  title     = {Deep {CORAL}: Correlation Alignment for Deep Domain Adaptation},
+  author    = {Sun, Baochen and Saenko, Kate},
+  booktitle = {Computer Vision -- ECCV 2016 Workshops},
+  year      = {2016},
+}
+
+@inproceedings{zhou2021mixstyle,
+  title     = {Domain Generalization with {MixStyle}},
+  author    = {Zhou, Kaiyang and Yang, Yongxin and Qiao, Yu and Xiang, Tao},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+}
+
+@inproceedings{sagawa2020groupdro,
+  title     = {Distributionally Robust Neural Networks for Group Shifts: On the
+               Importance of Regularization for Worst-Case Generalization},
+  author    = {Sagawa, Shiori and Koh, Pang Wei and Hashimoto, Tatsunori B. and
+               Liang, Percy},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2020},
+}
+
+@article{arjovsky2019irm,
+  title        = {Invariant Risk Minimization},
+  author       = {Arjovsky, Martin and Bottou, L{\'e}on and Gulrajani, Ishaan
+                  and Lopez-Paz, David},
+  journal      = {arXiv preprint arXiv:1907.02893},
+  year         = {2019},
+  eprint       = {1907.02893},
+  archivePrefix = {arXiv},
+  primaryClass = {stat.ML},
+}
+
+@inproceedings{gulrajani2021domainbed,
+  title     = {In Search of Lost Domain Generalization},
+  author    = {Gulrajani, Ishaan and Lopez-Paz, David},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+}
+
+
+% ------------------------------------------------------- ordinal learning
+
+@article{cao2020coralordinal,
+  title    = {Rank consistent ordinal regression for neural networks with
+              application to age estimation},
+  author   = {Cao, Wenzhi and Mirjalili, Vahid and Raschka, Sebastian},
+  journal  = {Pattern Recognition Letters},
+  volume   = {140},
+  pages    = {325--331},
+  year     = {2020},
+  doi      = {10.1016/j.patrec.2020.11.008},
+}
+
+
+% --------------------------------------------- metrics and calibration
+
+@article{cohen1968kappa,
+  title    = {Weighted kappa: Nominal scale agreement provision for scaled
+              disagreement or partial credit},
+  author   = {Cohen, Jacob},
+  journal  = {Psychological Bulletin},
+  volume   = {70},
+  number   = {4},
+  pages    = {213--220},
+  year     = {1968},
+  doi      = {10.1037/h0026256},
+}
+
+@article{brier1950verification,
+  title    = {Verification of forecasts expressed in terms of probability},
+  author   = {Brier, Glenn W.},
+  journal  = {Monthly Weather Review},
+  volume   = {78},
+  number   = {1},
+  pages    = {1--3},
+  year     = {1950},
+  doi      = {10.1175/1520-0493(1950)078<0001:VOFEIT>2.0.CO;2},
+}
+
+@inproceedings{guo2017calibration,
+  title     = {On Calibration of Modern Neural Networks},
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and
+               Weinberger, Kilian Q.},
+  booktitle = {Proceedings of the 34th International Conference on Machine
+               Learning (ICML)},
+  year      = {2017},
+  note      = {No Crossref DOI; verify against PMLR volume 70 before
+               submission},
+}
+
+@inproceedings{naeini2015ece,
+  title     = {Obtaining Well Calibrated Probabilities Using Bayesian Binning},
+  author    = {Naeini, Mahdi Pakdaman and Cooper, Gregory F. and
+               Hauskrecht, Milos},
+  booktitle = {Proceedings of the Twenty-Ninth AAAI Conference on Artificial
+               Intelligence (AAAI)},
+  year      = {2015},
+  note      = {No Crossref DOI; verify against the AAAI proceedings before
+               submission},
+}
+
+@inproceedings{geifman2017selective,
+  title     = {Selective Classification for Deep Neural Networks},
+  author    = {Geifman, Yonatan and El-Yaniv, Ran},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2017},
+  note      = {No Crossref DOI; verify against the NeurIPS proceedings before
+               submission},
+}
+
+
+% --------------------------------------------------------------- datasets
+
+@article{li2019ddr,
+  title    = {Diagnostic assessment of deep learning algorithms for diabetic
+              retinopathy screening},
+  author   = {Li, Tao and Gao, Yingqi and Wang, Kai and Guo, Song and
+              Liu, Hanruo and Kang, Hong},
+  journal  = {Information Sciences},
+  volume   = {501},
+  pages    = {511--522},
+  year     = {2019},
+  doi      = {10.1016/j.ins.2019.06.011},
+}
+
+@article{porwal2018idrid,
+  title    = {Indian Diabetic Retinopathy Image Dataset ({IDRiD}): A Database
+              for Diabetic Retinopathy Screening Research},
+  author   = {Porwal, Prasanna and Pachade, Samiksha and Kamble, Ravi and
+              Kokare, Manesh and Deshmukh, Girish and Sahasrabuddhe, Vivek and
+              Meriaudeau, Fabrice},
+  journal  = {Data},
+  volume   = {3},
+  number   = {3},
+  pages    = {25},
+  year     = {2018},
+  doi      = {10.3390/data3030025},
+}
+
+% EyePACS and APTOS 2019 were released as Kaggle competitions and have no
+% peer-reviewed dataset publication. They are cited as datasets, with the
+% reasoning and the exact access conditions recorded in
+% docs/DATASET_CITATION_NOTES.md. The URLs and organiser names below are the
+% authoritative identifiers these releases actually carry.
+
+@misc{eyepacs2015kaggle,
+  title        = {Diabetic Retinopathy Detection},
+  author       = {{EyePACS} and {California Healthcare Foundation}},
+  howpublished = {Kaggle competition},
+  year         = {2015},
+  url          = {https://www.kaggle.com/c/diabetic-retinopathy-detection},
+  note         = {No peer-reviewed dataset publication; see
+                  docs/DATASET_CITATION_NOTES.md},
+}
+
+@misc{aptos2019kaggle,
+  title        = {{APTOS} 2019 Blindness Detection},
+  author       = {{Asia Pacific Tele-Ophthalmology Society} and
+                  {Aravind Eye Hospital}},
+  howpublished = {Kaggle competition},
+  year         = {2019},
+  url          = {https://www.kaggle.com/c/aptos2019-blindness-detection},
+  note         = {No peer-reviewed dataset publication; see
+                  docs/DATASET_CITATION_NOTES.md},
+}
+
+
+% ------------------------------------------------------ reporting guidance
+
+@article{mongan2020claim,
+  title    = {Checklist for Artificial Intelligence in Medical Imaging
+              ({CLAIM}): A Guide for Authors and Reviewers},
+  author   = {Mongan, John and Moy, Linda and Kahn Jr., Charles E.},
+  journal  = {Radiology: Artificial Intelligence},
+  volume   = {2},
+  number   = {2},
+  pages    = {e200029},
+  year     = {2020},
+  doi      = {10.1148/ryai.2020200029},
+}
+
+@article{tejani2023claimupdate,
+  title    = {Updating the Checklist for Artificial Intelligence in Medical
+              Imaging ({CLAIM}) for reporting {AI} research},
+  author   = {Tejani, Ali S. and Klontzas, Michail E. and Gatti, Anthony A. and
+              Mongan, John and Moy, Linda and Park, Seong Ho and
+              Kahn, Charles E.},
+  journal  = {Nature Machine Intelligence},
+  volume   = {5},
+  number   = {9},
+  pages    = {950--951},
+  year     = {2023},
+  doi      = {10.1038/s42256-023-00717-2},
+}
+
+@article{collins2024tripodai,
+  title    = {{TRIPOD+AI} statement: updated guidance for reporting clinical
+              prediction models that use regression or machine learning
+              methods},
+  author   = {Collins, Gary S. and Moons, Karel G. M. and Dhiman, Paula and
+              Riley, Richard D. and Beam, Andrew L. and Van Calster, Ben and
+              Ghassemi, Marzyeh and Liu, Xiaoxuan and Reitsma, Johannes B. and
+              van Smeden, Maarten and Boulesteix, Anne-Laure and
+              Camaradou, Jennifer Catherine and Celi, Leo Anthony and
+              Denaxas, Spiros and Denniston, Alastair K. and Glocker, Ben and
+              Golub, Robert M. and Harvey, Hugh and Heinze, Georg and
+              Hoffman, Michael M. and Kengne, Andr{\'e} Pascal and
+              Lam, Emily and Lee, Naomi and Loder, Elizabeth W. and
+              Maier-Hein, Lena and Mateen, Bilal A. and McCradden, Melissa D.
+              and Oakden-Rayner, Lauren and Ordish, Johan and Parnell, Richard
+              and Rose, Sherri and Singh, Karandeep and Wynants, Laure and
+              Logullo, Patricia},
+  journal  = {BMJ},
+  volume   = {385},
+  pages    = {e078378},
+  year     = {2024},
+  doi      = {10.1136/bmj-2023-078378},
+}
