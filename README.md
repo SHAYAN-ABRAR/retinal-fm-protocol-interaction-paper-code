@@ -1,69 +1,81 @@
-# Beyond In-Domain Accuracy: Calibrated Domain Generalization for Reliable Diabetic Retinopathy Grading
+# Does linear probing predict fine-tuned cross-domain performance of a retinal foundation model?
 
-> **Status: Phases 1–13 complete. 328 tests, 2786 audit checks pass.**
-> **292 executions of 278 distinct configurations — 273 contributing
-> results, 9 superseded, 5 diverged. 119 GPU-hours, 4 backbones,
-> 3 protocols.**
+> ## Status: SCIENTIFIC PROGRAMME CLOSED — evidence frozen
 >
-> Full write-ups in [`docs/`](docs/). Every number below is produced by a script
-> in this repo and verified against `outputs/experiment_registry.csv`, which is
-> the authoritative record — the summary tables are derived from it and
-> `audit_consistency.py` checks they agree.
+> **110/110 authoritative runs COMPLETE · 134.3 GPU-hours · 438/438 tests ·
+> `audit_consistency` 3090 checks.**
 >
-> **Two audit modes, and what a clean clone can actually do.**
-> `outputs/predictions/`, `outputs/checkpoints/`, `outputs/logs/` and
-> `outputs/embeddings/` are gitignored, so a fresh clone has the registry and
-> the summary tables but **not** the per-image predictions. It can therefore run
-> the *source-and-table* audit (row-level agreement between tables and registry)
-> but **not** the *prediction-level* audit (recomputing each metric from saved
-> predictions). The 2786-check figure below is from a working tree with
-> artifacts present. A prediction bundle for full reproduction is pending —
-> see [`docs/JBHI_GAP_ANALYSIS.md`](docs/JBHI_GAP_ANALYSIS.md) item 10.
+> The DDR + APTOS full fine-tuning replication is complete and is the final
+> experimental evidence. **No further experiments are recommended or planned.**
 >
-> **Headline results**
+> Authoritative final state:
+> [`docs/JBHI_EVIDENCE_FREEZE.md`](docs/JBHI_EVIDENCE_FREEZE.md) ·
+> [`docs/JBHI_DRAFTING_MANIFEST.md`](docs/JBHI_DRAFTING_MANIFEST.md) ·
+> [`docs/README.md`](docs/README.md) (index of current vs historical documents).
 >
-> - **A linear probe and a fine-tune rank two foundation models differently.**
->   RETFound's *frozen* features transfer worse than the ImageNet-MAE ViT-L it
->   was built from — +0.0626 QWK on DDR (2.46× seed SD), +0.1134 on APTOS
->   (2.07×), 10 seeds. After fine-tuning both models identically, **no target
->   favours the ImageNet initialisation** and IDRiD favours RETFound.
->   Phases [12](docs/PHASE12_FOUNDATION_MODEL.md) and
->   [13](docs/PHASE13_FINETUNE.md).
-> - **No domain-generalization method beats ERM.** Deep CORAL, MixStyle,
->   GroupDRO and IRMv1, on two LODO targets, under two samplers, with
->   diagnostics proving the machinery engaged (0% degenerate batches under
->   balanced sampling). Phases [10](docs/PHASE10_DG_METHOD_COMPARISON.md) and
->   [11](docs/PHASE11_DDR_REPLICATION.md).
-> - **Input configuration beats every method and every backbone**, and the
->   batch-size confound has now been controlled. 224/b32 → 512/b16 is +0.0967
->   QWK on EyePACS combined. With batch held at 16, the isolated resolution term
->   is **+0.0865 on EyePACS (Holm *p* = 0.030, established)** and +0.0421 on
->   IDRiD (*p* = 0.088, positive on all three seeds but underpowered). The batch
->   term reaches significance on neither. The decomposition exists only for
->   EyePACS and IDRiD — **no isolated resolution effect is claimed for DDR or
->   APTOS**, which have no 224/b16 arm. Still larger than any DG method, any
->   architecture change, or 4× the training data.
->   Phase [9](docs/PHASE9_RESOLUTION_REPORT.md).
-> - **Cross-domain deployment costs 0.138 QWK on DDR and 0.291 on EyePACS**,
->   measured against in-domain models on identical images, with severe errors
->   up 107% and 155%.
-> - **Shift, not scale.** A fitted subsampling sensitivity model suggests
->   training-set size alone accounts for only a minority of the EyePACS gap.
->   This is an extrapolation 2.77× beyond the largest measured subsample and is
->   **not** a causal decomposition; see the caveat in Phase 9.
+> ### Primary result
 >
-> **Two bars for every claim.** An effect counts only if it exceeds the
-> across-seed SD *and* its paired bootstrap CI excludes zero. Three separate
-> results in this project were significant by bootstrap at three seeds and
-> vanished at five — see [Phase 13 §1](docs/PHASE13_FINETUNE.md). The bootstrap
-> resamples images within one seed and structurally cannot see seed variance.
+> The relative cross-domain QWK difference between the ImageNet-MAE
+> initialisation and RETFound **depends strongly on the downstream adaptation
+> protocol**. The protocol-by-initialisation interaction
+> `I_full = D_full - D_frozen`, where `D` is ImageNet-MAE minus RETFound QWK
+> within a protocol:
 >
-> **Not a paper yet:** no manuscript, no clinical validation, no
-> hyperparameter search. Unrun items are marked `NOT RUN`, and five runs that
-> diverged are recorded as `DIVERGED` rather than omitted.
-> See [Honesty policy](#12-honesty-policy).
+> | held out | n test | I_full | crossed 95% CI | *p* | **Holm *p*** | sign |
+> |---|---|---|---|---|---|---|
+> | DDR | 12,424 | **-0.1141** | [-0.1548, -0.0728] | 0.0066 | **0.0132** | 5/5 |
+> | APTOS | 3,504 | **-0.0992** | [-0.1595, -0.0397] | 0.0370 | **0.0370** | 5/5 |
+>
+> Statistically supported on both held-out domains, in the same direction, and
+> **all ten seed-level interactions are negative**. The large ImageNet-MAE
+> advantage seen under frozen linear probing is attenuated by roughly 0.10 QWK
+> under matched full fine-tuning.
+>
+> ### What this does *not* say
+>
+> - **No difference is demonstrated between the two initialisations under full
+>   fine-tuning — and that is not equivalence.** A null at five seeds bounds the
+>   effect only as tightly as its interval.
+> - **RETFound is not shown to be superior after fine-tuning.**
+> - The frozen-probe direction is **not uniform**: DDR and APTOS favour
+>   ImageNet-MAE, **IDRiD favours RETFound**.
+> - **IDRiD has no full fine-tuning arm.** That experiment was not run and no
+>   value is imputed for it anywhere; the interaction is a two-domain result.
+> - Nothing here generalises to other retinal foundation models, other
+>   architectures, or other adaptation budgets.
+>
+> ### Inferential vocabulary
+>
+> | instrument | role |
+> |---|---|
+> | crossed seed x case bootstrap | **uncertainty interval** — not a test |
+> | paired seed-level *t*-test | **formal inference** |
+> | Holm | **specified multiplicity correction**, across the two interaction tests |
+> | exact sign-flip permutation | **sensitivity** (floor 0.0625 at *n*=5) |
+> | seed SD, sign count | **descriptive diagnostics** |
+>
+> An effect with a multiplicity-adjusted *p* < 0.05 **and** an interval
+> excluding zero is *statistically supported under the study's inferential
+> framework*. Where the two disagree, the formal test governs.
+>
+> ### Reproduction
+>
+> `outputs/predictions/` is gitignored, so a clean clone cannot recompute the
+> numbers. A local reproducibility bundle (281 artifacts, 127.7 MB) is prepared
+> under `release/` — see
+> [`release/README_REPRODUCTION.md`](release/README_REPRODUCTION.md).
+> **It has not been published**; that awaits author approval and a check of each
+> dataset's redistribution terms.
+>
+> ### Everything below this banner is historical
+>
+> The sections that follow predate the freeze and are retained as a project
+> record. Where they disagree with the frozen state — including any older test
+> or audit counts, and any use of the retired "two-bar" phrasing — **the frozen
+> state above is correct.**
 
 ---
+
 
 ## 1. Research objective
 

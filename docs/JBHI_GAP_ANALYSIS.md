@@ -1,5 +1,13 @@
 # JBHI pre-submission gap analysis
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Date:** 2026-08-30 · **Repo state:** 278 runs, 273 COMPLETE, 5 DIVERGED · 328 tests · 2786 audit checks
 **Central claim under audit:** *Does linear probing predict fine-tuned cross-domain
 performance of a retinal foundation model?* — a lineage-matched comparison of

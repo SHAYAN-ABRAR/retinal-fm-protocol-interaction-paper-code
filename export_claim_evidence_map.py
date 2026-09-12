@@ -269,6 +269,22 @@ def main() -> int:
         forbidden_wording=("Target leakage. | RETFound saw the test data. | "
                            "The comparison is contaminated."))
 
+    add(claim_id="L4",
+        claim=("Demographic subgroup fairness could not be evaluated: the "
+               "public releases publish no harmonized patient demographics."),
+        claim_class="limitation",
+        datasets="DDR; APTOS; IDRiD; EyePACS", protocols="all", seeds="n/a",
+        authoritative_csv="label files of the four public releases (inspected)",
+        effect="0 demographic fields found", ci="n/a", formal_p="n/a",
+        multiplicity="n/a", sign_agreement="n/a", supported="n/a",
+        inference_status="limitation",
+        allowed_wording=("Demographic subgroup fairness could not be evaluated "
+                         "because harmonized patient demographic attributes "
+                         "were not available across the public releases."),
+        forbidden_wording=("Any subgroup or fairness analysis. | Inferring age, "
+                           "sex, race or ethnicity from the images. | Claiming "
+                           "the models were shown to be fair or unbiased."))
+
     frame = pd.DataFrame(claims, columns=[
         "claim_id", "claim", "claim_class", "datasets", "protocols", "seeds",
         "authoritative_csv", "effect", "ci", "formal_p", "multiplicity",

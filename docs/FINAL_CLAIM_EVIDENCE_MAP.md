@@ -159,13 +159,14 @@ Therefore:
 
 ---
 
-## L1–L3 — LIMITATIONS that must appear
+## L1–L4 — LIMITATIONS that must appear
 
 | id | limitation |
 |---|---|
 | **L1** | IDRiD contributes **no** full fine-tuning evidence. The interaction is a two-domain result. No IDRiD full-FT value is imputed anywhere. |
 | **L2** | The two-domain family is a **post-hoc pairing**: DDR was observed before APTOS was specified. APTOS's recipe and analysis were frozen before any APTOS target outcome was inspected, and Holm is applied for conservative final reporting — but this is **not** a prospectively specified two-domain design. |
 | **L3** | EyePACS is in RETFound's published pretraining corpus and is a **source** domain here. No held-out target image was seen in pretraining or training; the exposure applies identically to both protocol arms and cannot generate the interaction. **Do not call this target leakage.** |
+| **L4** | **Demographic subgroup fairness could not be evaluated.** Verified 2026-09-12 by inspecting the label files of all four releases: the only columns present are image identifiers, DR grade, macular-oedema risk and lesion coordinates. **No age, sex, race or ethnicity field exists in any release.** Mandated sentence: *"Demographic subgroup fairness could not be evaluated because harmonized patient demographic attributes were not available across the public releases."* Do not infer demographics from images; do not report any subgroup analysis. |
 
 Further scope limits for the Discussion: two initialisations, one architecture
 (ViT-L/16), one adaptation budget, five seeds per protocol, QWK as the primary

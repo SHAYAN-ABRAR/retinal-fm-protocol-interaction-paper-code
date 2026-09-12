@@ -1,5 +1,13 @@
 # Phase 2 — Manifest, deduplication, splits, leakage
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Date:** 2026-08-19
 **Reproduce with:** `research_pipeline.py`, Cells 9–13
 **Artefacts:** `outputs/reports/unified_manifest_split.csv`, `outputs/reports/phase2_leakage_audit.json`, `outputs/figures/*.png`

@@ -1,5 +1,13 @@
 # Phase 8 — Does a stronger backbone fix the calibration problem?
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Run:** ERM, **ConvNeXt-Tiny**, batch 32, 224 px, 20 epochs, **seeds 42 / 1 / 2**
 **Compared against:** ERM, DenseNet121, identical protocol, seeds 42 / 1 / 2
 **Date:** 2026-08-22 (seed 42) · 2026-08-24 (seeds 1, 2) · 5 h 48 m GPU total

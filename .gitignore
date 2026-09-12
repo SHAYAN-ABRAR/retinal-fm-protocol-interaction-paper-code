@@ -11,3 +11,9 @@ outputs/logs/*
 *.pth
 *.npz
 .pytest_cache/
+
+# Local reproducibility bundle: assembled by fetch_artifacts.py --build.
+# 127.7 MB of frozen predictions, kept out of the source repository. The
+# manifest and README are tracked; the payload is not, and is published only
+# with author approval.
+release/bundle/

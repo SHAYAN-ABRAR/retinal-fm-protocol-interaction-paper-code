@@ -1,5 +1,13 @@
 # Phase 12 — Retinal foundation pretraining and the frozen representation
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Protocol:** frozen features, linear probe, leave-one-domain-out
 **Backbones:** RETFound CFP · ImageNet-MAE ViT-L/16 · DenseNet121 (ImageNet)
 **Targets:** DDR · APTOS · IDRiD — **EyePACS excluded, see §1**

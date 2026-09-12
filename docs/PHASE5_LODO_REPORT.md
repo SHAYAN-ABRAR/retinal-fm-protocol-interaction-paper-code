@@ -1,5 +1,13 @@
 # Phase 5 — The full leave-one-domain-out matrix
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Run:** ERM, DenseNet121, batch 32, 20 epochs, **3 seeds (42, 1, 2)**
 **Date:** 2026-08-20 · 2h24m wall clock (2288 + 2317 + 2946 + 829 s)
 **Protocol:** train on three domains, test on the fourth. The held-out domain

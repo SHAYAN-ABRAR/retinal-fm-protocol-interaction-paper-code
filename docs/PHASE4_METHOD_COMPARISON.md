@@ -1,5 +1,13 @@
 # Phase 4 — Method comparison: DDR + APTOS → unseen IDRiD
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Date:** 2026-08-20
 **Protocol:** leave-one-domain-out, DenseNet121, 224px, batch 32, 20 epochs, **3 seeds (42, 1, 2)**
 **Reproduce with:** `run_method_comparison.py --seeds 42,1,2`, then `analyse_seeds.py`, `analyse_method_comparison.py`, `analyse_embeddings.py`

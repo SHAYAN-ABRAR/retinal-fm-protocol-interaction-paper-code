@@ -1,5 +1,13 @@
 # Phase 10 — Four DG methods, two samplers, and why none of them wins
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Run:** DenseNet121, 224 px, batch 32, 20 epochs, LODO target **EyePACS**
 **Methods:** Deep CORAL · MixStyle · GroupDRO · IRMv1, each against an **ERM control on the same sampler**
 **Samplers:** natural shuffling · domain-balanced batches

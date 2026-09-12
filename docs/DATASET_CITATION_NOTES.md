@@ -12,8 +12,8 @@ E-utilities (PubMed `esummary`), and publisher pages.
 
 | | |
 |---|---|
-| entries | **26** |
-| with a verified DOI | **14** (every journal article) |
+| entries | **28** |
+| with a verified DOI | **16** (every journal article) |
 | without a DOI | 12 — conference proceedings, one preprint, two dataset releases |
 | duplicate keys | none |
 | duplicate DOIs | none |
@@ -40,6 +40,8 @@ Author lists, year, volume, issue, pages/article number and DOI all confirmed:
 | `tejani2023claimupdate` | Crossref — 7 authors, *Nat. Mach. Intell.* 5(9):950–951 |
 | `collins2024tripodai` | Crossref — 34 authors, *BMJ* 385:e078378 |
 | `deng2009imagenet` | Crossref — CVPR 2009, DOI 10.1109/CVPR.2009.5206848 |
+| `tejani2024claim` | Crossref DOI lookup + PubMed esummary — 80 authors, *Radiol. Artif. Intell.* 6(4):e240300 |
+| `sounderajah2025stardai` | Crossref — 51 authors, *Nat. Med.* 31(10):3283–3289 |
 
 ### Corrections the verification forced
 
@@ -118,12 +120,24 @@ does not exist. Option (a) is what the bib currently does.
 
 ## Items that remain UNCERTAIN — author action required
 
-1. **"CLAIM 2024" could not be verified.** A Crossref search for a 2024 CLAIM
-   update in *Radiology: Artificial Intelligence* returned **no such record**.
-   What does exist and is verified: the original CLAIM (Mongan et al., 2020)
-   and an update announcement (Tejani et al., *Nat. Mach. Intell.*, 2023). The
-   bibliography contains **both**. If the intended reference is a 2024 revision,
-   the author must supply its DOI; it has not been invented here.
+1. ~~"CLAIM 2024" could not be verified.~~ **CORRECTED 2026-09-12 — this
+   earlier note was wrong.** CLAIM 2024 exists and is now the operative
+   checklist in the bibliography:
+   Tejani AS et al., *Checklist for Artificial Intelligence in Medical Imaging
+   (CLAIM): 2024 Update*, **Radiol. Artif. Intell. 6(4):e240300 (2024)**,
+   DOI `10.1148/ryai.240300`, PMID 38809149, PMC11304031, **80 authors**.
+   Verified by direct Crossref DOI lookup and PubMed esummary.
+
+   **Why the earlier check failed, because the failure mode matters:** the
+   first attempt used a Crossref *bibliographic title query*, which returned
+   the 2020 original and the 2023 announcement but not the 2024 update, and
+   that absence was wrongly reported as non-existence. A direct
+   `works/{doi}` lookup returns it immediately. **Title queries are a weak
+   negative; only a DOI or PMID lookup settles existence.** All three CLAIM
+   records are now in the bibliography: `tejani2024claim` is the operative
+   checklist, `mongan2020claim` is the original, and `tejani2023claimupdate`
+   is retained as historical context and does **not** substitute for the 2024
+   checklist.
 2. **Page numbers for the three non-Crossref proceedings entries** (Guo, Naeini,
    Geifman), if the journal style demands them.
 3. **Kaggle competition terms** for EyePACS and APTOS, confirmed current at

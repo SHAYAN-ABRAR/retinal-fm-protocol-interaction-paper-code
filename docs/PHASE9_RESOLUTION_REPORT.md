@@ -1,5 +1,13 @@
 # Phase 9 — Input resolution: the largest effect in the project
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Run:** ERM, DenseNet121, **512 px, batch 16**, 20 epochs
 **Compared against:** ERM, DenseNet121, **224 px, batch 32**, identical otherwise
 **Seeds:** 42 on every cell; **42 / 1 / 2** on LODO APTOS, IDRiD and EyePACS

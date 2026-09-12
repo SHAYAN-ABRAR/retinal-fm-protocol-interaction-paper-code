@@ -1,5 +1,13 @@
 # Phase 3 — Baseline result: DDR + APTOS → IDRiD
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Date:** 2026-08-19
 **Experiment ID:** `lodo_aptos-ddr__idrid_densenet121_erm-none_s42`
 **Reproduce with:** `research_pipeline.py`, Cells 13b–18b

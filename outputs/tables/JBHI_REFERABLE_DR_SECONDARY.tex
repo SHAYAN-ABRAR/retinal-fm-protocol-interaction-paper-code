@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\centering
+\caption{\textbf{Post-hoc secondary screening-oriented analysis using the fixed ICDR referable-DR definition (grade $\geq 2$).} Reported for clinical interpretability only; it is not a primary outcome and does not replace quadratic weighted kappa. The threshold is the fixed ICDR definition and was not tuned on either held-out domain, nor selected after inspecting target performance. Values are the mean $\pm$ standard deviation over the five common seeds (42, 1, 2, 3, 4). AUROC uses the summed predicted probability of grades $\geq 2$. The held-out test set is identical across arms and protocols within a domain, so $n$ and referable prevalence are properties of the domain (DDR: $n=12\,424$, prevalence 0.453; APTOS: $n=3\,504$, prevalence 0.391). \textbf{No significance test is reported here}: the pre-specified inference is the protocol interaction on quadratic weighted kappa, and testing these conditions post hoc would amount to searching for an additional positive result.}
+\label{tab:jbhi-referable-dr}
+\begin{tabular}{lllrrrrr}
+\toprule
+Held-out & Protocol & Initialisation & Sensitivity & Specificity & PPV & F1 & AUROC \\
+\midrule
+DDR & Frozen probe & ImageNet-MAE & 0.525 $\pm$ 0.028 & 0.933 $\pm$ 0.015 & 0.867 $\pm$ 0.023 & 0.654 $\pm$ 0.020 & 0.828 $\pm$ 0.012 \\
+DDR & Frozen probe & RETFound & 0.435 $\pm$ 0.013 & 0.935 $\pm$ 0.006 & 0.848 $\pm$ 0.009 & 0.575 $\pm$ 0.010 & 0.778 $\pm$ 0.004 \\
+DDR & Full fine-tuning & ImageNet-MAE & 0.621 $\pm$ 0.049 & 0.930 $\pm$ 0.012 & 0.879 $\pm$ 0.027 & 0.727 $\pm$ 0.043 & 0.844 $\pm$ 0.020 \\
+DDR & Full fine-tuning & RETFound & 0.619 $\pm$ 0.036 & 0.939 $\pm$ 0.016 & 0.895 $\pm$ 0.020 & 0.731 $\pm$ 0.021 & 0.843 $\pm$ 0.014 \\
+APTOS & Frozen probe & ImageNet-MAE & 0.980 $\pm$ 0.006 & 0.488 $\pm$ 0.082 & 0.554 $\pm$ 0.041 & 0.707 $\pm$ 0.033 & 0.943 $\pm$ 0.008 \\
+APTOS & Frozen probe & RETFound & 0.980 $\pm$ 0.006 & 0.326 $\pm$ 0.027 & 0.483 $\pm$ 0.011 & 0.647 $\pm$ 0.010 & 0.895 $\pm$ 0.016 \\
+APTOS & Full fine-tuning & ImageNet-MAE & 0.977 $\pm$ 0.002 & 0.796 $\pm$ 0.023 & 0.755 $\pm$ 0.021 & 0.851 $\pm$ 0.013 & 0.965 $\pm$ 0.002 \\
+APTOS & Full fine-tuning & RETFound & 0.977 $\pm$ 0.005 & 0.777 $\pm$ 0.014 & 0.738 $\pm$ 0.012 & 0.841 $\pm$ 0.008 & 0.956 $\pm$ 0.007 \\
+\bottomrule
+\end{tabular}
+\end{table*}

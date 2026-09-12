@@ -1,5 +1,13 @@
 # Phase 13 — Fine-tuning erases the difference Phase 12 found
 
+> **HISTORICAL PROJECT RECORD — NOT AUTHORITATIVE FOR THE FINAL MANUSCRIPT.**
+> See [`JBHI_EVIDENCE_FREEZE.md`](JBHI_EVIDENCE_FREEZE.md) and
+> [`JBHI_DRAFTING_MANIFEST.md`](JBHI_DRAFTING_MANIFEST.md) for the frozen final
+> state. Statements below were true at the time they were written and may have
+> been superseded — including older test and audit counts, the retired
+> "two-bar" terminology, and novelty framing that has since been narrowed.
+
+
 **Protocol:** partial fine-tuning, last 4 of 24 blocks (50.4 M of 303.3 M trainable, **identical on both models**)
 **Backbones:** RETFound CFP · ImageNet-MAE ViT-L/16
 **Targets:** DDR · APTOS · IDRiD — **five seeds each**
