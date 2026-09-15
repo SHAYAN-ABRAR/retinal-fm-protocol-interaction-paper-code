@@ -1,493 +1,289 @@
 # Does linear probing predict fine-tuned cross-domain performance of a retinal foundation model?
 
-> ## Status: SCIENTIFIC PROGRAMME CLOSED — evidence frozen
+A matched-initialisation comparison of **RETFound** against the exact
+**ImageNet-MAE** checkpoint it was continued from, evaluated under three
+adaptation protocols on held-out diabetic-retinopathy domains.
+
+> ## Status: scientific programme CLOSED · evidence FROZEN
 >
 > **110/110 authoritative runs COMPLETE · 134.3 GPU-hours · 438/438 tests ·
-> `audit_consistency` 3090 checks.**
+> `audit_consistency` 3,090 checks.**
 >
-> The DDR + APTOS full fine-tuning replication is complete and is the final
-> experimental evidence. **No further experiments are recommended or planned.**
->
-> Authoritative final state:
-> [`docs/JBHI_EVIDENCE_FREEZE.md`](docs/JBHI_EVIDENCE_FREEZE.md) ·
-> [`docs/JBHI_DRAFTING_MANIFEST.md`](docs/JBHI_DRAFTING_MANIFEST.md) ·
-> [`docs/README.md`](docs/README.md) (index of current vs historical documents).
->
-> ### Primary result
->
-> The relative cross-domain QWK difference between the ImageNet-MAE
-> initialisation and RETFound **depends strongly on the downstream adaptation
-> protocol**. The protocol-by-initialisation interaction
-> `I_full = D_full - D_frozen`, where `D` is ImageNet-MAE minus RETFound QWK
-> within a protocol:
->
-> | held out | n test | I_full | crossed 95% CI | *p* | **Holm *p*** | sign |
-> |---|---|---|---|---|---|---|
-> | DDR | 12,424 | **-0.1141** | [-0.1548, -0.0728] | 0.0066 | **0.0132** | 5/5 |
-> | APTOS | 3,504 | **-0.0992** | [-0.1595, -0.0397] | 0.0370 | **0.0370** | 5/5 |
->
-> Statistically supported on both held-out domains, in the same direction, and
-> **all ten seed-level interactions are negative**. The large ImageNet-MAE
-> advantage seen under frozen linear probing is attenuated by roughly 0.10 QWK
-> under matched full fine-tuning.
->
-> ### What this does *not* say
->
-> - **No difference is demonstrated between the two initialisations under full
->   fine-tuning — and that is not equivalence.** A null at five seeds bounds the
->   effect only as tightly as its interval.
-> - **RETFound is not shown to be superior after fine-tuning.**
-> - The frozen-probe direction is **not uniform**: DDR and APTOS favour
->   ImageNet-MAE, **IDRiD favours RETFound**.
-> - **IDRiD has no full fine-tuning arm.** That experiment was not run and no
->   value is imputed for it anywhere; the interaction is a two-domain result.
-> - Nothing here generalises to other retinal foundation models, other
->   architectures, or other adaptation budgets.
->
-> ### Inferential vocabulary
->
-> | instrument | role |
-> |---|---|
-> | crossed seed x case bootstrap | **uncertainty interval** — not a test |
-> | paired seed-level *t*-test | **formal inference** |
-> | Holm | **specified multiplicity correction**, across the two interaction tests |
-> | exact sign-flip permutation | **sensitivity** (floor 0.0625 at *n*=5) |
-> | seed SD, sign count | **descriptive diagnostics** |
->
-> An effect with a multiplicity-adjusted *p* < 0.05 **and** an interval
-> excluding zero is *statistically supported under the study's inferential
-> framework*. Where the two disagree, the formal test governs.
->
-> ### Reproduction
->
-> `outputs/predictions/` is gitignored, so a clean clone cannot recompute the
-> numbers. A local reproducibility bundle (281 artifacts, 127.7 MB) is prepared
-> under `release/` — see
-> [`release/README_REPRODUCTION.md`](release/README_REPRODUCTION.md).
-> **It has not been published**; that awaits author approval and a check of each
-> dataset's redistribution terms.
->
-> ### Everything below this banner is historical
->
-> The sections that follow predate the freeze and are retained as a project
-> record. Where they disagree with the frozen state — including any older test
-> or audit counts, and any use of the retired "two-bar" phrasing — **the frozen
-> state above is correct.**
+> The DDR + APTOS full fine-tuning replication is the final experimental
+> evidence. **No further experiments are planned or recommended.**
 
 ---
 
+## The result
 
-## 1. Research objective
+The relative cross-domain QWK difference between the two initialisations
+**depends strongly on the downstream adaptation protocol**.
 
-Diabetic-retinopathy (DR) classifiers routinely report strong in-domain accuracy,
-but deployment means running on images from a clinic the model has never seen.
-This project asks two questions under a rigorous protocol:
+Define, within a protocol, `Δ = QWK(ImageNet-MAE) − QWK(RETFound)`. The
+protocol-by-initialisation interaction is `I_full = Δ_full − Δ_frozen`, paired
+within seed:
 
-1. **How much do accuracy *and calibration* degrade on a completely unseen
-   dataset?** Calibration is treated as a first-class outcome, not an afterthought —
-   a model that is confidently wrong on a new clinic's images is worse than one
-   that knows it is uncertain.
-2. **Do ordinal learning, domain-generalization methods, and post-hoc
-   calibration actually reduce that degradation?** Including the possibility that
-   they do not. Negative results are reportable results.
+| held out | *n* test | **I_full** | crossed 95% CI | *p* | **Holm *p*** | sign |
+|---|---|---|---|---|---|---|
+| DDR | 12,424 | **−0.1141** | [−0.1548, −0.0728] | 0.0066 | **0.0132** | 5/5 |
+| APTOS | 3,504 | **−0.0992** | [−0.1595, −0.0397] | 0.0370 | **0.0370** | 5/5 |
 
-DR severity is graded on the 5-point ICDR scale (0 No DR → 4 Proliferative DR),
-which is **ordinal**, so ordinal-aware objectives are evaluated alongside plain
-5-class cross-entropy.
+Statistically supported on both held-out domains, in the same direction, with
+**all ten seed-level interactions negative**. The large ImageNet-MAE advantage
+measured under frozen linear probing is attenuated by roughly **0.10 QWK**
+under matched full fine-tuning.
 
-## 2. Experimental design
+The mechanism in plain view, on APTOS:
 
-Four public datasets, each treated as a distinct clinical domain:
-
-| Domain ID | Dataset | Images | Role |
+| protocol | ImageNet-MAE | RETFound | Δ |
 |---|---|---|---|
-| 0 | DDR | 12,424 | source / target |
-| 1 | APTOS 2019 | 3,504 | source / target |
-| 2 | IDRiD | 507 | source / target |
-| 3 | EyePACS | 35,108 *(label-verified)* | source / target |
+| frozen linear probe | 0.5872 | 0.4796 | **+0.1075** |
+| partial FT (last 4 of 24 blocks) | 0.8334 | 0.8261 | +0.0073 |
+| full fine-tuning | 0.8123 | 0.8040 | +0.0083 |
 
-Counts are **after** removing 265 byte-identical duplicates (see
-[`docs/PHASE2_DATA_REPORT.md`](docs/PHASE2_DATA_REPORT.md)). Only EyePACS exposes
-patient ids (17,561 patients); it is split at patient level, the others at image
-level — a documented dataset limitation.
+Both arms gain enormously from adaptation (RETFound 0.4796 → 0.8040), so this
+is not a ceiling effect.
 
-**Protocols**
+## What this does **not** say
 
-- *In-domain*: train, validate and test within one dataset.
-- *Single-source external validation*: train on one dataset, test on the other three.
-- *Leave-one-domain-out (LODO)*: train on three, test on the fourth. Four runs.
+- **No difference is demonstrated between the two initialisations under full
+  fine-tuning — and that is not equivalence.** A null at five seeds bounds the
+  effect only as tightly as its interval.
+- **RETFound is not shown to be superior after fine-tuning.**
+- The frozen-probe direction is **not uniform**: DDR and APTOS favour
+  ImageNet-MAE, **IDRiD favours RETFound** (−0.0429, ten seeds).
+- **IDRiD has no full fine-tuning arm.** That experiment was not run and no
+  value is imputed for it anywhere; the interaction is a two-domain result.
+- **This is not a priority claim.** RETFound's own paper already compares
+  against an SSL-ImageNet baseline. The contribution is the *within-lineage
+  protocol interaction*, and the wording is "to our knowledge", never "first".
+- Nothing generalises to other retinal foundation models, architectures, or
+  adaptation budgets.
 
-**The held-out target domain is sacred.** It never influences training,
-hyperparameters, augmentation choice, early stopping, temperature scaling, λ
-selection, or model selection. Validation data comes only from source domains.
-If a proposed analysis would violate this, the correct response is to refuse it
-and explain the right protocol.
+Full allowed/forbidden wording per claim:
+[`docs/FINAL_CLAIM_EVIDENCE_MAP.md`](docs/FINAL_CLAIM_EVIDENCE_MAP.md).
 
-**Methods.** ERM baseline → ordinal objective (CORAL/CORN-style) → Deep CORAL
-alignment → MixStyle → temperature scaling → selective prediction. A combined
-method is considered *only* if the baselines justify it (see
-[Naming](#naming-collision-two-different-corals)).
+## Design
 
-## 3. Dataset setup
+Two checkpoints of **one lineage**, identical architecture (ViT-L/16, 224 px):
 
-Datasets live outside the repo. Their locations — and the verified facts about
-each — are in [`configs/paths.yaml`](configs/paths.yaml).
+```
+ImageNet-MAE (timm vit_large_patch16_224.mae)
+        │  continued MAE pretraining on retinal colour fundus photographs
+        ▼
+RETFound-CFP (RETFound_mae_natureCFP.pth)
+```
 
-**Read [`docs/DATA_PROVENANCE.md`](docs/DATA_PROVENANCE.md) before touching the
-data.** A Phase-1 audit of `D:\DB` found four problems that would silently
-invalidate every downstream result:
+Each initialisation enters each of three protocols — **frozen linear probe**,
+**partial FT** (last 4 of 24 blocks), **full FT** (all 303,306,757 encoder
+parameters) — under one fixed recipe, evaluated **leave-one-domain-out** across
+four public DR datasets.
 
-- **`Dataset 1` is not raw EyePACS.** It is a third-party derivative that also
-  contains **100% of the APTOS dataset** (3,662/3,662 ids). Used naively, a LODO
-  run holding out APTOS would train on its entire test set.
-- **50,070 of its EyePACS labels are corrupted.** Verification against an
-  independent copy of the Kaggle `trainLabels.csv` found one single grade-3 image
-  among 50,070, where ~1,247 are expected. The domain is restricted to the
-  **35,108 images whose labels agree 100.0000%** with the reference.
-- **Its provided train/val/test folders leak** — 1,231 base photographs and
-  14,244 patients appear in more than one split.
-- **It ships baked-in augmented duplicates**, so augmented copies of test images
-  sit in the training folders.
+**Target labels are never used** for model selection, early stopping,
+hyperparameter choice or temperature scaling. Temperature is fitted on source
+validation only.
 
-These are handled by explicit, asserted exclusion rules in `configs/paths.yaml`,
-not by hoping the loader gets it right.
+| held out | frozen probe | partial FT | full FT |
+|---|---|---|---|
+| DDR | 20 (10 seeds × 2 arms) | 10 (5 × 2) | 10 (5 × 2) |
+| APTOS | 20 | 10 | 10 |
+| IDRiD | 20 | 10 | **0 — not run** |
 
-To point the project at a different machine, edit **only** `configs/paths.yaml`.
-Nothing else hard-codes a data path.
+Seeds: 42, 1, 2, 3, 4 for both adaptation protocols; those plus 5–9 for the
+frozen probe. **Interactions use the common five**, because the contrast is
+paired within seed.
 
-## 4. Environment setup
+## Statistical framework
 
-Hardware target: **RTX 5060 Laptop (8 GB VRAM), 16 GB RAM, Windows 11**.
+| instrument | role |
+|---|---|
+| crossed seed × case bootstrap (2,000 replicates) | **uncertainty interval** — not a test |
+| paired seed-level *t*-test | **formal inference** |
+| Holm | **specified multiplicity correction**, across the two interaction tests only |
+| exact sign-flip permutation | **sensitivity** (floor 2/2⁵ = 0.0625 at *n*=5) |
+| seed SD, sign count | **descriptive diagnostics** |
 
-### 4.1 Install PyTorch first — the CUDA build matters
+An effect whose multiplicity-adjusted *p* < 0.05 **and** whose crossed interval
+excludes zero is *statistically supported under the study's inferential
+framework*. **Where the two disagree, the formal test governs** — this occurs
+for the DDR full-FT comparison, whose interval excludes zero while *p* = 0.1035,
+and where consequently nothing is claimed.
 
-The RTX 5060 is Blackwell, **compute capability sm_120**. Kernels for sm_120 ship
-only in **CUDA 12.8 and newer** PyTorch builds. A plain `pip install torch` gives
-you a CPU-only wheel on Windows; an older CUDA wheel imports fine and reports
-`cuda.is_available() == True`, then dies on the first kernel launch with
-`no kernel image is available for execution on the device`.
+## Study chronology
+
+Stated as it happened, because it changes how the two-domain family should be
+read:
+
+1. The **DDR** full-FT experiment was specified, frozen, run — and **observed**.
+2. **Only then** was APTOS specified as a confirmatory replication. Its protocol
+   was committed before the first APTOS run, its recipe copied unchanged, and
+   its analysis script written while seven of the ten runs did not yet exist.
+3. Holm adjustment across the two domains is applied for conservative final
+   reporting.
+
+**The two-domain family was not pre-specified before DDR was seen.**
+
+## Repository layout
+
+```
+src/                    library: data, models, losses, training, evaluation
+tests/                  438 tests
+configs/                experiment configuration
+analyse_*.py            analyses that read frozen predictions
+export_*.py             authoritative tables, claim map, provenance
+make_jbhi_figures.py    main figures 1–5
+make_jbhi_supplement_figures.py   supplementary S1–S6
+audit_*.py              consistency, resume, identity audits
+fetch_artifacts.py      assembles the reproducibility bundle
+outputs/tables/         authoritative result tables
+outputs/figures/jbhi_final/   11 figures, PNG (400 dpi) + vector PDF
+docs/                   documentation — start at docs/README.md
+paper/                  manuscript scaffold, verified bibliography, checklists
+release/                reproducibility bundle (payload gitignored)
+```
+
+## Documentation
+
+**Start at [`docs/README.md`](docs/README.md)** — it separates authoritative
+final sources from superseded historical records, which matters here because
+the project ran through thirteen phases and the older documents contradict the
+frozen state.
+
+| document | what it settles |
+|---|---|
+| [`docs/JBHI_EVIDENCE_FREEZE.md`](docs/JBHI_EVIDENCE_FREEZE.md) | hashes, run accounting, datasets, checkpoints, hypotheses, seed sets, chronology |
+| [`docs/JBHI_DRAFTING_MANIFEST.md`](docs/JBHI_DRAFTING_MANIFEST.md) | which artifact each manuscript section draws on, with claim guardrails |
+| [`docs/FINAL_CLAIM_EVIDENCE_MAP.md`](docs/FINAL_CLAIM_EVIDENCE_MAP.md) | every claim with allowed and forbidden wording |
+| [`docs/JBHI_DATASET_PROVENANCE.md`](docs/JBHI_DATASET_PROVENANCE.md) | dataset table, contamination disclosure, integrity controls |
+| [`docs/LITERATURE_NOVELTY_AUDIT.md`](docs/LITERATURE_NOVELTY_AUDIT.md) | corrected novelty position and the full search record |
+| [`docs/JBHI_FIGURE_REVIEW.md`](docs/JBHI_FIGURE_REVIEW.md) | per-figure purpose, placement, reviewer-misreading notes |
+| [`paper/CLAIM_2024_CHECKLIST.md`](paper/CLAIM_2024_CHECKLIST.md) | CLAIM 2024 compliance audit, 44 items |
+
+## Data and integrity controls
+
+Four public DR datasets. **DDR**, **APTOS 2019** and **IDRiD** serve as held-out
+targets; **EyePACS** is a source domain only.
+
+Two controls a reader needs to know about, both enforced in code:
+
+1. **The EyePACS-derivative folder physically contains all 3,662 APTOS images.**
+   The loader keeps only `^\d+_(left|right)$` filenames and rejects every 12-hex
+   APTOS id (`src/data/eyepacs.py:99,144`). Without this, holding out APTOS
+   would have trained on 100% of its own test set. This is the single most
+   consequential integrity control in the study.
+2. **EyePACS appears in RETFound's published pretraining corpus** and is a
+   *source* domain here. This is disclosed, is **not target leakage** — no
+   held-out target image was seen in pretraining or training — and applies
+   identically to both protocol arms, so it cannot generate the interaction.
+
+EyePACS labels were verified against an independent copy of the official labels
+at 100.0000% agreement; the 50,070 unverifiable images were excluded. Full
+detail: [`docs/DATA_PROVENANCE.md`](docs/DATA_PROVENANCE.md).
+
+## Reproduction
+
+`outputs/predictions/` is gitignored, so a clean clone can read the code but
+cannot recompute the numbers. Every statistic in this study is derived from
+**saved predictions, not checkpoints**, so a 127.7 MB bundle replaces ~60 GB of
+weights.
+
+```bash
+python fetch_artifacts.py --check-terms   # report identifier exposure only
+python fetch_artifacts.py --build         # assemble release/bundle/ locally
+```
+
+With the artifacts restored under `outputs/`:
+
+```bash
+python export_jbhi_tables.py             # master + primary interaction tables
+python analyse_aptos_replication.py      # the APTOS replication analysis
+python export_claim_evidence_map.py      # claim-evidence map
+python export_referable_dr_secondary.py  # post-hoc referable-DR secondary
+python make_jbhi_figures.py              # main figures 1-5
+python make_jbhi_supplement_figures.py   # supplementary S1-S6
+```
+
+All five authoritative tables and all 23 figure files regenerate
+**byte-identically**. Analyses need only CPU.
+
+See [`release/README_REPRODUCTION.md`](release/README_REPRODUCTION.md). **The
+bundle has not been published**; that awaits author approval and a check of each
+dataset's redistribution terms.
+
+### Training runs are not bit-reproducible, by recorded design
+
+`run_lodo.py` sets `deterministic: False`, so cuDNN autotuning is on. Measured
+directly: two from-scratch executions of the identical command at the identical
+seed differ from epoch 0. Reproducing this study reproduces the *distribution
+over seeds*, not individual numbers. **The frozen predictions sidestep this
+entirely** — every analysis is exactly reproducible even though training is not.
+
+## Environment
+
+Python 3.14.3 · PyTorch 2.9.1+cu128 · torchvision 0.24.1+cu128 · timm 1.0.28 ·
+CUDA 12.8 · NVIDIA RTX 5060 Laptop (8 GB) · Windows 11.
+
+The RTX 5060 is Blackwell (**sm_120**); kernels ship only in CUDA 12.8+ builds.
+An older CUDA wheel imports cleanly and reports `cuda.is_available() == True`,
+then dies on the first kernel launch.
 
 ```powershell
-cd "D:\Research Code\dr_domain_generalization"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-
-# CUDA 12.8 build -- required for sm_120
 pip install torch==2.9.1 torchvision==0.24.1 --index-url https://download.pytorch.org/whl/cu128
-
 pip install -r requirements.txt
 ```
 
-`src/utils/hardware.py` detects both failure modes explicitly and, in
-`assert_cuda_ready()`, **refuses to fall back to CPU** — this study is not
-feasible on CPU, so silence would be worse than a crash.
+`src/utils/hardware.py` refuses to fall back to CPU — this study is not feasible
+on CPU, so silence would be worse than a crash.
 
-### 4.2 Verify
+Full environment record including the RETFound checkpoint SHA256:
+`outputs/tables/JBHI_ENVIRONMENT.csv`.
 
-Run Cells 1–4 of `research_pipeline.py`. Cell 2 prints the full hardware report
-and launches a real CUDA kernel as a smoke test.
+## Verification
 
-## 5. How to run
-
-`research_pipeline.py` is a **VS Code Python Interactive** script. Each `# %%`
-marker is a cell; press *Run Cell* (Ctrl+Enter) as you would in Colab. Nothing
-expensive runs on import, and no cell trains a model unless you run it.
-
-| Cells | Phase | Cost | What it does |
-|---|---|---|---|
-| 1–4 | 1 | seconds | Imports, GPU diagnostics, config, seeding + fingerprint |
-| 5–8 | 1 | ~3–5 min | Directory discovery, metadata, label mapping, **EyePACS label verification (7b)**, provenance audit |
-| 9–13 | 2 | ~10 min | Manifest, deduplication, splits, **leakage audit**, image statistics, 18 figures, dataloaders. Cell 13 needs torch |
-| 13b | 3 | ~30 min once | **Pre-resized image cache.** Turns a ~5 img/s raw loader into ~1340 img/s; training becomes GPU-bound |
-| 14–16 | 3 | GPU: ~20 min | Model + batch-size probe, sanity/overfit check, ERM training |
-| 17–18b | 3 | minutes | Evaluation, temperature scaling, generalization gap, figures, registry |
-| 19–29 | 4 | GPU hours | Ordinal, Deep CORAL, MixStyle, full LODO, bootstrap, selective prediction |
-| 30–32 | 5 | minutes | Figures, tables, summary report |
-
-Cells 14+ are currently **stubs**. Running one prints what it will do and what it
-is waiting on. No stub fabricates numbers or writes result files.
-
-### Staged development
-
-Following the plan in the brief: **Stage A** sanity check on a DDR+APTOS subset at
-224×224 → **Stage B** single-source domain shift → **Stage C** methodology on
-DDR+APTOS→IDRiD (computationally manageable) → **Stage D** full LODO with EyePACS.
-
-## 6. Folder structure
-
-```
-dr_domain_generalization/
-├── research_pipeline.py        # interactive driver (35 `# %%` cells)
-├── run_lodo.py                 # the four leave-one-domain-out experiments
-├── run_in_domain.py            # in-domain ceilings + deployment-cost comparison
-├── run_single_source.py        # the 4x4 cross-domain matrix
-├── run_method_comparison.py    # Stage-C six-method ablation
-├── analyse_lodo.py             # single-seed LODO analysis
-├── analyse_lodo_seeds.py       # multi-seed LODO (two-bar criterion)
-├── analyse_seeds.py            # Stage-C multi-seed
-├── analyse_selective.py        # risk-coverage / abstention
-├── regenerate_figures.py       # rebuild figures from saved predictions
-├── configs/                    # paths, baseline, domain_generalization, experiments
-├── data_external/
-│   └── eyepacs_trainLabels.csv #   reference labels (~500 KB, Cell 7b)
-├── docs/
-│   ├── DATA_PROVENANCE.md            # Phase-1 audit  <-- read this first
-│   ├── PHASE2_DATA_REPORT.md         # manifest, duplicates, splits, leakage
-│   ├── PHASE3_BASELINE_REPORT.md     # first baseline (superseded)
-│   ├── PHASE4_METHOD_COMPARISON.md   # six methods x 3 seeds
-│   ├── PHASE5_LODO_REPORT.md         # the four LODO experiments
-│   ├── PHASE6_IN_DOMAIN_REPORT.md    # in-domain ceilings, deployment cost
-│   ├── PHASE7_CROSS_DOMAIN_MATRIX.md # the 4x4 matrix, size vs shift
-│   ├── PHASE8_BACKBONE_COMPARISON.md # ConvNeXt-Tiny vs DenseNet121
-│   ├── PHASE9_RESOLUTION_REPORT.md   # 512 px vs 224 px
-│   └── PROJECT_HANDBOOK.md/.html     # where everything is + paper guide
-├── src/
-│   ├── data/       aptos.py, augmentations.py, cache.py, ddr.py
-│   │               deduplicate.py, eyepacs.py, eyepacs_labels.py, idrid.py
-│   │               image_stats.py, inspect.py, leakage.py, loaders.py
-│   │               preprocessing.py, provenance.py, schema.py, splits.py
-│   │               unified_dataset.py
-│   ├── models/     backbones.py, mixstyle.py
-│   ├── losses/     classification.py, deep_coral_alignment.py
-│   │               ordinal_coral_loss.py
-│   ├── training/   checkpointing.py, early_stopping.py, methods.py
-│   │               trainer.py
-│   ├── evaluation/ bootstrap.py, calibration.py, embeddings.py, evaluate.py
-│   │               metrics.py, selective_prediction.py
-│   ├── visualization/ calibration_figures.py, dataset_figures.py
-│   │                  domain_figures.py, error_figures.py, feature_figures.py
-│   │                  performance_figures.py, pipeline_diagram.py, style.py
-│   │                  training_figures.py
-│   ├── reporting/  summary.py, tables.py
-│   └── utils/      config.py, hardware.py, io.py, logging.py, registry.py,
-│                    seed.py
-├── outputs/        checkpoints, logs, tables, predictions, figures, embeddings, reports
-└── tests/         11 files, 271 tests
+```bash
+python -m pytest -q                 # 438 tests
+python audit_consistency.py         # 3,090 cross-checks
+python audit_resumed_runs.py        # learning-rate schedule integrity
+python export_evidence_freeze.py    # re-hash every artifact
+python paper/check_numbers.py       # manuscript numbers trace to generators
+python paper/check_report_numbers.py
+python paper/check_latex.py
 ```
 
-`src/` is the tested library; the top-level `run_*` and `analyse_*` scripts are
-thin drivers that compose it. Nothing important lives only in the pipeline file.
+## Honesty policy
 
-## 7. Reproducibility
+The practices this repository actually follows, stated so they can be checked:
 
-`src/utils/seed.py` seeds Python, NumPy, PyTorch CPU and CUDA, and records a
-`RunFingerprint` (seed, Python/package/CUDA versions, GPU model, driver, git
-commit) saved with every run to `outputs/reports/`.
+- **Unrun work is marked `NOT RUN`, never estimated.** IDRiD full fine-tuning
+  was not run, and no value is imputed for it anywhere.
+- **Nulls are reported as nulls.** The full-FT comparison failed to demonstrate
+  a difference on both domains, and is reported that way rather than as
+  equivalence or as a near-miss.
+- **Superseded results are retained**, not deleted. Abandoned executions are
+  archived under names recording why they were abandoned.
+- **Corrections are made in place and left visible.** Where a claim was
+  narrowed or an audit tool was found wrong, the record says so — see the
+  novelty correction in
+  [`docs/LITERATURE_NOVELTY_AUDIT.md`](docs/LITERATURE_NOVELTY_AUDIT.md) §0 and
+  the citation corrections in
+  [`docs/DATASET_CITATION_NOTES.md`](docs/DATASET_CITATION_NOTES.md).
+- **Every manuscript number traces to a generator CSV**, enforced by
+  `check_numbers.py` and `check_report_numbers.py`.
+- **Target blindness was maintained and is auditable** — the APTOS analysis code
+  predates seven of its ten runs in the git history.
 
-`deterministic=True` is available but costs roughly 10–30% throughput because it
-disables cuDNN autotuning. Default is `deterministic=False` with a fixed seed;
-determinism is enabled for tests and for anything that must be bit-reproducible.
+## Historical record
 
-## 8. Memory budget (8 GB VRAM)
+The mid-project README is preserved at
+[`docs/README_HISTORICAL.md`](docs/README_HISTORICAL.md), and the thirteen phase
+reports carry banners marking them non-authoritative. They are kept because they
+document what was believed at each stage; where they disagree with the frozen
+state, **the frozen state is correct**.
 
-Mixed precision throughout; gradient accumulation where the effective batch size
-must be preserved; evaluation under `inference_mode`; predictions moved to CPU
-immediately.
+## Citation
 
-**Measured** on the RTX 5060 (8 GB), DenseNet121, 224px, AMP, batch 16:
-peak **1.13 GB** allocated — far below the card's limit, so there is ample room
-for 384px or larger batches. `estimate_memory()` probes real peak usage rather
-than guessing.
-
-| Resolution | Starting batch | Fallback |
-|---|---|---|
-| 224×224 | 16 (measured 1.13 GB) | 8 |
-| 384×384 | 8 | 4, then 2 + gradient accumulation |
-
-Throughput after caching: loader 1343 img/s (2 workers) vs GPU 217 img/s
-(DenseNet121) / 317 img/s (ConvNeXt-Tiny) — **GPU-bound**, so raising
-`num_workers` will not make training faster.
-
-**Windows note:** DataLoader workers use `spawn`, which re-imports the main
-module. Any standalone script using `num_workers > 0` must put its work behind
-`if __name__ == "__main__":` or it will appear to hang. VS Code interactive cells
-are unaffected. `build_loaders()` warns when it detects the risky combination.
-
-Batch size is **recorded, never silently changed** mid-experiment. With 16 GB
-system RAM (~3.5 GB free when audited), images load lazily and `num_workers=4` is
-an upper bound to validate, not a default to assume.
-
-## 9. Naming collision: two different "CORAL"s
-
-The literature has two unrelated methods with the same name. This project keeps
-them in separate files with unambiguous names:
-
-| File | Method | What it does |
-|---|---|---|
-| `src/losses/ordinal_coral_loss.py` | **CORAL ordinal regression** (Cao et al.) | Rank-consistent ordinal classification via K−1 binary tasks with shared weights. Exploits `0 < 1 < 2 < 3 < 4`. |
-| `src/losses/deep_coral_alignment.py` | **Deep CORAL** (Sun & Saenko) | **CORrelation ALignment** — matches second-order feature covariance across *source domains*. A domain-generalization objective. |
-
-They solve different problems and are never interchangeable. Cells 20 and 21
-respectively.
-
-## 10. Experiment naming convention
-
-```
-{protocol}_{sources}__{target}_{backbone}_{method}_s{seed}
-e.g.  lodo_ddr-aptos-eyepacs__idrid_convnext-tiny_mixstyle-ordinal_s42
-      indomain_ddr__ddr_densenet121_erm_s42
-```
-
-Every finished run appends one row to `outputs/experiment_registry.csv` with its
-config, seed, domains, backbone, loss, hyperparameters, best checkpoint and all
-test metrics. Rows are appended; results are never overwritten.
-
-## 11. Troubleshooting CUDA
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `torch.version.cuda is None` | CPU-only wheel | Reinstall from the cu128 index (§4.1) |
-| `no kernel image is available` | CUDA < 12.8 build on sm_120 | Same |
-| `cuda.is_available()` False, `nvidia-smi` works | Wheel/driver mismatch, or `CUDA_VISIBLE_DEVICES=""` | Check the env var, reinstall |
-| OOM at 384×384 | 8 GB VRAM | Batch 8 → 4 → 2 + gradient accumulation; record the change |
-| Workers crash / RAM exhausted | 16 GB shared with everything | `num_workers` 4 → 2; close other applications |
-
-Cell 2 diagnoses all of these and prints an actionable message.
-
-## 11b. Headline results (3 seeds — read the caveats)
-
-Full leave-one-domain-out, DenseNet121, batch 32, seeds 42/1/2.
-Detail: [`docs/PHASE5_LODO_REPORT.md`](docs/PHASE5_LODO_REPORT.md).
-
-| Held out | n_test | target QWK | target ECE | after T | severe |
-|---|---|---|---|---|---|
-| DDR | 12,424 | 0.7383 ± 0.0055 | 0.1296 ± 0.0083 | **0.0472** | 0.1598 |
-| APTOS | 3,504 | 0.8590 ± 0.0054 | 0.1239 ± 0.0137 | **0.0397** | 0.0628 |
-| IDRiD | 507 | 0.7413 ± 0.0244 | 0.2294 ± 0.0151 | 0.1213 | 0.1177 |
-| EyePACS | 35,108 | 0.4147 ± 0.0081 | 0.2846 ± 0.0074 | 0.1729 | 0.2407 |
-
-**Do not quote a mean over these four.** The range is −0.483 to +0.063 against
-source validation; no target is near the mean.
-
-**Validation performance does not predict generalization.** On IDRiD the three
-seeds agree to 0.0009 on source validation and differ by 0.0244 on the target —
-a ratio of 28×. Model selection may only use source validation under this
-protocol, so selection is close to blind with respect to what matters.
-
-**The cost of cross-domain deployment**, against in-domain models on identical
-test images, **three seeds on both sides, paired seed-to-seed**
-([`docs/PHASE6_IN_DOMAIN_REPORT.md`](docs/PHASE6_IN_DOMAIN_REPORT.md)):
-
-| Domain | in-domain | LODO mean | Δ | Δ SD | verdict |
-|---|---|---|---|---|---|
-| DDR | 0.8702 ± 0.0086 | 0.7327 ± 0.0038 | **−0.1376** | 0.0119 | REAL (both bars) |
-| APTOS | 0.9085 ± 0.0097 | 0.8625 ± 0.0103 | −0.0460 | 0.0127 | CI spans zero |
-| IDRiD | 0.5846 ± 0.0191 | 0.6803 ± 0.0504 | +0.0957 | 0.0695 | CI spans zero |
-| EyePACS | 0.7063 ± 0.0139 | 0.4153 ± 0.0082 | **−0.2910** | 0.0202 | REAL (both bars) |
-
-Severe errors on the same matched images: DDR 0.0788 → 0.1631 (**+107%**),
-EyePACS 0.0938 → 0.2396 (**+155%**), both clearing the two-bar criterion.
-
-## 11c. Method comparison (Stage C, 3 seeds)
-
-`DDR + APTOS → unseen IDRiD`, n=507.
-Detail: [`docs/PHASE4_METHOD_COMPARISON.md`](docs/PHASE4_METHOD_COMPARISON.md).
-
-| Method | Target QWK | Target ECE | severe |
-|---|---|---|---|
-| **ERM** | **0.7235 ± 0.0320** | 0.2973 ± 0.0304 | **0.1065** |
-| Ordinal | 0.6545 ± 0.0111 | **0.0610 ± 0.0068** | 0.2156 |
-| Deep CORAL | 0.6743 ± 0.0158 | 0.3264 ± 0.0347 | 0.1374 |
-| MixStyle | 0.6617 ± 0.0197 | 0.3122 ± 0.0229 | 0.1486 |
-| MixStyle + Ordinal | 0.6596 ± 0.0170 | 0.0632 ± 0.0091 | 0.2110 |
-| Deep CORAL + Ordinal | 0.6778 ± 0.0068 | 0.0745 ± 0.0182 | 0.2032 |
-
-- **Every alternative is worse than ERM on target QWK**, clearing both the
-  across-seed SD and the paired bootstrap.
-- **The ordinal calibration win comes with class collapse.** ECE improves ~10×
-  the seed noise, but grades 1 and 3 collapse and severe-error rate doubles.
-  Aggregate calibration must never be reported without per-class recall beside it.
-- **Deep CORAL's calibration penalty was withdrawn.** A single-seed claim
-  (+0.071) did not survive three seeds (+0.029 against pooled SD 0.033).
-
-## 11d. Cross-domain matrix (single-source, seed 42)
-
-Target QWK, rows = trained on, columns = tested on; diagonal is in-domain.
-Detail: [`docs/PHASE7_CROSS_DOMAIN_MATRIX.md`](docs/PHASE7_CROSS_DOMAIN_MATRIX.md).
-
-| train \ test | DDR | APTOS | IDRiD | EyePACS | n_train |
-|---|---|---|---|---|---|
-| **DDR** | *0.876* | 0.782 | 0.600 | 0.372 | 8,697 |
-| **APTOS** | 0.568 | *0.909* | 0.723 | 0.433 | 2,809 |
-| **IDRiD** | 0.516 | 0.597 | *0.588* | 0.236 | 335 |
-| **EyePACS** | 0.731 | 0.856 | 0.756 | *0.709* | 24,574 |
-
-**Multi-source training buys nothing.** One source matches three on all four
-targets; every difference is inside the seed SD. The three-source pools were
-68–89% EyePACS, so the LODO numbers largely measure *which* source was used,
-not *how many*.
-
-**The lowest-scoring dataset is the best source.** EyePACS reaches only 0.709 on
-its own data at 224 px, yet trained on EyePACS and tested on DDR it scores
-**0.731, above its own validation score of 0.712** (both 224 px). A source's own
-score is a poor guide to its worth as training data.
-
-> **Corrected 2026-08-22.** This was previously headed *"the worst-labelled
-> dataset is the best source"* and explained by label noise. **The 512 px re-run
-> reaches 0.8004 on the same test images** (+0.0914, CI [+0.0694, +0.1142]), so
-> resolution — not label quality — set the 0.709. The observation stands; the
-> label-noise mechanism is withdrawn. See Phase 6 §0a.
-
-**Resolution was the binding constraint on EyePACS.** At 512 px the in-domain
-model reaches 0.8004 QWK and cuts the severe-error rate from 0.0919 to 0.0575,
-a 37% relative reduction on the metric that matters clinically. Every other
-number in this README is a 224 px measurement; the 512 px matrix is running.
-
-## 11e. Selective prediction
-
-Abstention is not a rescue. Error-detection AUROC across the four unseen
-domains is 0.657–0.723; handing a clinician the least-confident 30% of cases
-cuts the automated error rate by only 17–33%, and works *worst* on EyePACS
-where it is needed most. Temperature scaling is monotonic, so these numbers are
-identical before and after calibration.
-
-## 11f. Foundation model: the protocol decides the answer
-
-RETFound (ViT-L/16, MAE, ~904,170 colour fundus photographs) against
-`vit_large_patch16_224.mae` — **the checkpoint RETFound's own args name as its
-initialisation**. Same architecture, same 303.3 M parameters, same objective,
-same splits. The intervention is the additional retinal-domain MAE pretraining
-stage itself, not dataset identity alone.
-
-**Frozen features, linear probe, 5 seeds**
-([`docs/PHASE12_FOUNDATION_MODEL.md`](docs/PHASE12_FOUNDATION_MODEL.md)):
-
-| Target | RETFound | ImageNet-MAE | Δ | Δ/SD | verdict |
-|---|---|---|---|---|---|
-| DDR | 0.5130 | **0.5756** | +0.0626 | 2.46× | ImageNet better |
-| APTOS | 0.4829 | **0.5963** | +0.1134 | 2.07× | ImageNet better |
-| IDRiD | 0.6792 | 0.6363 | −0.0429 | 1.25× | CI spans zero |
-
-**Both fine-tuned identically, last 4 of 24 blocks**
-([`docs/PHASE13_FINETUNE.md`](docs/PHASE13_FINETUNE.md)):
-
-| Target | RETFound | ImageNet-MAE | Δ | Δ/SD | verdict |
-|---|---|---|---|---|---|
-| DDR (n=5) | 0.6966 | 0.7183 | +0.0217 | 0.82× | within seed noise |
-| APTOS (n=5) | 0.8261 | 0.8334 | +0.0073 | 0.42× | within seed noise |
-| IDRiD (n=5) | **0.7676** | 0.7252 | −0.0423 | 1.13× | **RETFound better** |
-
-**The two protocols disagree.** The frozen probe shows a large gap on two of
-three targets; fine-tuning shows none, and reverses on the third. Linear probing
-is the standard cheap benchmark for a foundation model, and here it does not
-predict the model's behaviour when used as intended.
-
-EyePACS is excluded as a target throughout: it is **in RETFound's pretraining
-corpus**, so using it would report leakage as generalization.
-`assert_target_not_pretrained` raises rather than warns, in both
-`run_retfound_probe.py` and `run_lodo.py`.
-
-## 12. Honesty policy
-
-Non-negotiable for this project:
-
-- **Nothing is fabricated** — no placeholder accuracy, QWK, AUROC, CI, timing or
-  significance value ever appears in a result file.
-- Unrun work is labelled `NOT RUN` / `PENDING`, as the Cell 9+ stubs are.
-- Measured facts and assumptions are kept visibly separate; `docs/DATA_PROVENANCE.md`
-  cites how each number was obtained and re-derives it in code.
-- Known limitations (no patient IDs for DDR/APTOS/IDRiD, the EyePACS reference
-  labels being a corroborated *secondary* source, 5 grade-1 test images in IDRiD)
-  are stated in the paper, not buried.
-- The combined method is not called novel unless an ablation and a literature
-  review support it.
+The manuscript is in preparation. Citation metadata, licence, and an archival
+DOI are author decisions still outstanding — see
+[`paper/OPEN_ITEMS.md`](paper/OPEN_ITEMS.md).
